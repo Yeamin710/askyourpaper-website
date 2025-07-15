@@ -12,7 +12,7 @@
             --text-color: #CCCCCC;
             --main-text-color: #FFFFFF;
             --border-color: #333333;
-            --button-border: #666666;
+            --button-border: #666666; /* Ensure this variable exists and is used */
             --button-hover-bg: #222222;
             --shadow-color: rgba(0, 0, 0, 0.5);
             --disabled-color: #555555;
@@ -86,11 +86,14 @@
             align-items: flex-end;
             gap: 15px;
             margin-top: -15px;
+            flex-wrap: wrap;
         }
         .action-buttons-column {
             display: flex;
             flex-direction: column;
             align-items: center;
+            flex: 1 1 auto;
+            min-width: 120px;
         }
         .action-hint-arrow {
             color: var(--hint-color);
@@ -117,6 +120,8 @@
             transition: all 0.3s ease;
             box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
             text-transform: uppercase;
+            width: 100%;
+            box-sizing: border-box;
         }
         .action-button:hover:not(:disabled) {
             background-color: var(--button-hover-bg);
@@ -129,6 +134,13 @@
             box-shadow: var(--active-glow);
             transform: translateY(-2px);
             animation: pulse-glow 2s infinite ease-in-out;
+        }
+        .action-button.active:hover {
+            background-color: var(--active-bg);
+            color: var(--active-text);
+            border-color: var(--active-bg);
+            box-shadow: var(--active-glow);
+            transform: translateY(-2px);
         }
         .action-button:disabled {
             background-color: transparent;
@@ -149,6 +161,7 @@
             padding: 40px 20px;
             cursor: pointer;
             transition: all 0.3s ease;
+            text-align: center;
         }
         .file-upload-box:hover {
             background-color: rgba(255, 255, 255, 0.1);
@@ -168,6 +181,7 @@
             color: var(--main-text-color);
             font-weight: 600;
             text-transform: uppercase;
+            font-size: 0.9rem;
         }
         .file-name {
             margin-top: 10px;
@@ -175,6 +189,9 @@
             font-style: italic;
             font-weight: 400;
             text-transform: uppercase;
+            font-size: 0.8rem;
+            text-align: center;
+            word-break: break-all;
         }
         input[type="file"] {
             display: none;
@@ -184,11 +201,14 @@
             flex-direction: column;
             align-items: center;
             gap: 10px;
+            width: 100%;
+            box-sizing: border-box;
         }
         .url-input-group {
             display: flex;
             gap: 10px;
             width: 100%;
+            flex-direction: row;
         }
         .url-input {
             flex-grow: 1;
@@ -213,6 +233,8 @@
             align-items: center;
             margin-top: 15px;
             margin-bottom: 25px;
+            flex-wrap: wrap-reverse;
+            justify-content: center;
         }
         #generate-btn {
             padding: 15px 30px;
@@ -226,6 +248,8 @@
             color: var(--main-text-color);
             box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
             text-transform: uppercase;
+            flex-grow: 1;
+            max-width: 250px;
         }
         #generate-btn:hover:not(:disabled) {
             transform: translateY(-3px);
@@ -251,8 +275,9 @@
             height: 400px;
             overflow-y: auto;
             scroll-behavior: smooth;
+            font-size: 0.95rem;
         }
-        #response-output {
+        #response-output { /* This ID seems unused based on initial-response-output */
             font-size: 16px;
             word-wrap: break-word;
             white-space: pre-wrap;
@@ -287,6 +312,7 @@
         }
         .dot:nth-child(1) { animation-delay: -0.32s; }
         .dot:nth-child(2) { animation-delay: -0.16s; }
+        .dot:nth-child(3) { animation-delay: 0s; }
         @keyframes bounce {
             0%, 80%, 100% { transform: scale(0); }
             40% { transform: scale(1.0); }
@@ -310,6 +336,7 @@
             gap: 10px;
             margin-top: 25px;
             transition: opacity 0.5s ease;
+            flex-direction: row;
         }
         .chat-input-group.visible {
             display: flex;
@@ -368,6 +395,8 @@
         .difficulty-buttons {
             display: flex;
             gap: 15px;
+            flex-wrap: wrap;
+            justify-content: center;
         }
         .difficulty-button {
             padding: 10px 20px;
@@ -380,11 +409,21 @@
             transition: all 0.2s ease;
             text-transform: uppercase;
             font-size: 0.8rem;
+            flex: 1 1 auto;
+            min-width: 80px;
+            box-sizing: border-box;
         }
         .difficulty-button:hover {
             background-color: var(--button-hover-bg);
         }
         .difficulty-button.active {
+            background-color: var(--active-bg);
+            color: var(--active-text);
+            border-color: var(--active-bg);
+            box-shadow: var(--active-glow);
+            animation: pulse-glow 2s infinite ease-in-out;
+        }
+        .difficulty-button.active:hover {
             background-color: var(--active-bg);
             color: var(--active-text);
             border-color: var(--active-bg);
@@ -411,12 +450,18 @@
             background-color: rgba(255, 255, 255, 0.05);
             border-radius: 8px;
             cursor: pointer;
-            transition: background-color 0.2s ease;
-            border: 1px solid transparent;
+            transition: background-color 0.2s ease, border-color 0.2s ease;
+            border: 1px solid transparent; /* Default transparent border */
             font-size: 0.95rem;
+            word-wrap: break-word;
         }
         .mcq-option:hover {
             background-color: rgba(255, 255, 255, 0.1);
+        }
+        /* NEW: Style for selected option before submission */
+        .mcq-option.selected {
+            background-color: rgba(255, 255, 255, 0.2);
+            border-color: var(--active-bg); /* Use active color for selection indication */
         }
         .mcq-option.correct {
             background-color: #28a745;
@@ -486,12 +531,192 @@
             color: var(--main-text-color);
             cursor: pointer;
             transition: all 0.3s ease;
-            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+            box-shadow: 0 4-10px rgba(0, 0, 0, 0.2);
             text-transform: uppercase;
         }
         #upload-link-btn:hover {
             background-color: var(--button-hover-bg);
             transform: translateY(-2px);
+        }
+
+        /* --- Mobile Responsiveness --- */
+        @media (max-width: 768px) {
+            body {
+                padding: 10px;
+            }
+
+            .app-container {
+                padding: 20px;
+                gap: 15px;
+            }
+
+            h1 {
+                font-size: 2rem;
+            }
+
+            .action-instruction-text {
+                font-size: 0.95rem;
+            }
+
+            .action-buttons-container {
+                flex-direction: column;
+                align-items: stretch;
+                gap: 10px;
+                margin-top: 0;
+            }
+
+            .action-buttons-column {
+                min-width: unset;
+            }
+
+            .action-hint-arrow {
+                display: none;
+            }
+
+            .action-button {
+                padding: 12px 20px;
+                font-size: 0.9rem;
+            }
+
+            .file-upload-box {
+                padding: 30px 15px;
+            }
+
+            .upload-icon {
+                font-size: 30px;
+            }
+
+            .upload-text {
+                font-size: 0.8rem;
+            }
+
+            .file-name {
+                font-size: 0.75rem;
+            }
+
+            .url-input-group {
+                flex-direction: column;
+                gap: 10px;
+            }
+
+            #url-upload-btn {
+                width: 100%;
+                padding: 12px 20px;
+                font-size: 0.9rem;
+                box-sizing: border-box;
+            }
+
+            .button-group {
+                flex-direction: column-reverse;
+                align-items: center;
+                gap: 10px;
+                margin-bottom: 15px;
+            }
+
+            #generate-btn, #submit-mcq-btn { /* Added submit button here */
+                width: 100%;
+                max-width: none;
+                padding: 15px 25px;
+                font-size: 1rem;
+            }
+
+            .output-container {
+                height: 300px;
+                padding: 15px;
+                font-size: 0.9rem;
+            }
+            
+            .chat-input-group {
+                flex-direction: column;
+                gap: 10px;
+                margin-top: 15px;
+            }
+
+            .chat-input {
+                padding: 10px 15px;
+                font-size: 0.9rem;
+            }
+
+            #send-btn {
+                width: 100%;
+                padding: 10px 15px;
+                font-size: 0.9rem;
+            }
+
+            .mcq-question-text {
+                font-size: 1rem;
+            }
+
+            .mcq-option {
+                padding: 10px 12px;
+                font-size: 0.9rem;
+            }
+
+            #mcq-results {
+                font-size: 1.1rem;
+                padding: 15px;
+            }
+            
+            .difficulty-buttons {
+                flex-direction: column;
+                align-items: stretch;
+                gap: 8px;
+            }
+
+            .difficulty-button {
+                width: 100%;
+                min-width: unset;
+                padding: 10px 15px;
+                font-size: 0.85rem;
+            }
+        }
+
+        /* Even smaller screens (e.g., very small phones) */
+        @media (max-width: 480px) {
+            .app-container {
+                padding: 15px;
+                gap: 10px;
+            }
+
+            h1 {
+                font-size: 1.8rem;
+            }
+
+            .action-button, #generate-btn, #send-btn, #url-upload-btn, .difficulty-button, #submit-mcq-btn {
+                padding: 10px 15px;
+                font-size: 0.85rem;
+            }
+
+            .file-upload-box {
+                padding: 25px 10px;
+            }
+
+            .upload-icon {
+                font-size: 28px;
+            }
+
+            .upload-text {
+                font-size: 0.75rem;
+            }
+
+            .url-input, .chat-input {
+                padding: 10px 12px;
+                font-size: 0.85rem;
+            }
+
+            .output-container {
+                height: 250px;
+                padding: 12px;
+                font-size: 0.8rem;
+            }
+
+            .mcq-question-text {
+                font-size: 0.95rem;
+            }
+
+            .mcq-option {
+                font-size: 0.85rem;
+            }
         }
     </style>
 </head>
@@ -508,15 +733,15 @@
 
     <div class="action-buttons-container">
         <div class="action-buttons-column">
-            <span class="action-hint-arrow">⮟</span>
+            <span class="action-hint-arrow"></span>
             <button class="action-button" data-mode="summarize">Summarize</button>
         </div>
         <div class="action-buttons-column">
-            <span class="action-hint-arrow">⮟</span>
+            <span class="action-hint-arrow"></span>
             <button class="action-button" data-mode="highlights">Extract Highlights</button>
         </div>
         <div class="action-buttons-column">
-            <span class="action-hint-arrow">⮟</span>
+            <span class="action-hint-arrow"></span>
             <button class="action-button" data-mode="mcq">Generate MCQ</button>
         </div>
     </div>
@@ -564,6 +789,10 @@
         <p id="initial-response-output" class="chat-message"><span class="sender">ASSISTANT</span><span class="content">SELECT AN ACTION AND UPLOAD A DOCUMENT TO GET STARTED.</span></p>
     </div>
 
+    <div id="mcq-submit-group" class="button-group" style="display: none;">
+        <button id="submit-mcq-btn">SUBMIT QUIZ</button>
+    </div>
+
     <div id="chat-input-group" class="chat-input-group">
         <input type="text" id="chat-input" class="chat-input" placeholder="ASK A QUESTION ABOUT THE DOCUMENT...">
         <button id="send-btn">SEND</button>
@@ -571,6 +800,7 @@
 </div>
 
 <script>
+    // IMPORTANT: Replace with your actual N8N webhook URLs
     const initialGenerationWebhookUrl = "YOUR_INITIAL_GENERATION_WEBHOOK_URL_HERE";
     const chatWebhookUrl = "YOUR_CHAT_WEBHOOK_URL_HERE";
 
@@ -595,15 +825,23 @@
     const urlUploadContainer = document.getElementById('url-upload-container');
     const goBackBtn = document.querySelector('.go-back-btn');
 
+    // NEW: MCQ specific elements
+    const mcqSubmitGroup = document.getElementById('mcq-submit-group');
+    const submitMcqBtn = document.getElementById('submit-mcq-btn');
+
+
     let selectedFile = null;
     let selectedUrl = null;
     let currentMode = null;
     let selectedDifficulty = null;
     let sessionId = null;
-    let isChatActive = false;
+    let isChatActive = false; // Tracks if a chat session is active (post-initial generation)
+    
+    // NEW: MCQ state variables
     let score = 0;
-    let questionsAnswered = 0;
     let totalQuestions = 0;
+    let userAnswers = {}; // Stores { questionIndex: selectedOptionText }
+    let currentQuizQuestions = []; // Stores the actual questions data for validation
 
     const updateButtonState = () => {
         const isSourceSelected = selectedFile !== null || selectedUrl !== null;
@@ -617,16 +855,31 @@
 
     actionButtons.forEach(button => {
         button.addEventListener('click', () => {
-            actionButtons.forEach(btn => btn.classList.remove('active'));
+            actionButtons.forEach(btn => {
+                btn.classList.remove('active');
+                void btn.offsetWidth; // Force a reflow/re-render to ensure animation resets
+            });
+
             button.classList.add('active');
             currentMode = button.getAttribute('data-mode');
             actionInstruction.classList.add('hidden');
             
+            // Hide submit button and chat input when changing mode
+            mcqSubmitGroup.style.display = 'none';
+            chatInputGroup.classList.remove('visible');
+            initialResponseOutput.style.display = 'block'; // Show initial message again
+
             if (currentMode === 'mcq') {
                 mcqOptionsContainer.classList.add('visible');
-                document.querySelector('[data-difficulty="medium"]').click();
+                // Programmatically click "Medium" to activate its glow immediately
+                const mediumButton = document.querySelector('[data-difficulty="medium"]');
+                if (mediumButton) {
+                    mediumButton.click(); // This will trigger its own click handler
+                }
             } else {
                 mcqOptionsContainer.classList.remove('visible');
+                // Also remove active state from difficulty buttons when not in MCQ mode
+                difficultyButtons.forEach(btn => btn.classList.remove('active'));
                 selectedDifficulty = null;
             }
             
@@ -636,7 +889,10 @@
 
     difficultyButtons.forEach(button => {
         button.addEventListener('click', () => {
-            difficultyButtons.forEach(btn => btn.classList.remove('active'));
+            difficultyButtons.forEach(btn => {
+                btn.classList.remove('active');
+                void btn.offsetWidth; // Force reflow for difficulty buttons too
+            });
             button.classList.add('active');
             selectedDifficulty = button.getAttribute('data-difficulty');
             updateButtonState();
@@ -703,6 +959,10 @@
         loadingIndicator.style.display = 'flex';
         updateInitialResponse("GENERATING...");
 
+        // Hide chat input and MCQ submit button during generation
+        chatInputGroup.classList.remove('visible');
+        mcqSubmitGroup.style.display = 'none';
+
         try {
             const formData = new FormData();
             if (selectedFile) {
@@ -726,23 +986,26 @@
 
             const data = await response.json();
             
-            if (data && data.text && data.sessionId) {
+            if (data && data.sessionId) {
                 sessionId = data.sessionId;
                 isChatActive = true;
-                initialResponseOutput.style.display = 'none';
-                addMessage('assistant', data.text);
-                chatInputGroup.classList.add('visible');
-                chatInput.focus();
+                initialResponseOutput.style.display = 'none'; // Hide initial message
+
+                if (currentMode === 'mcq' && data.mcq_questions) {
+                    currentQuizQuestions = data.mcq_questions; // Store questions for later validation
+                    renderMCQTest(currentQuizQuestions);
+                    // chatInputGroup will be shown after MCQ submission
+                } else if (data.text) { // For summarize and highlights
+                    addMessage('assistant', data.text);
+                    chatInputGroup.classList.add('visible'); // Show chat input for text modes
+                    chatInput.focus();
+                } else {
+                    updateInitialResponse("ERROR: INVALID RESPONSE FROM N8N.");
+                }
                 outputAndChat.scrollIntoView({ behavior: 'smooth', block: 'end' });
-            } else if (data && data.mcq_questions && data.sessionId) {
-                sessionId = data.sessionId;
-                isChatActive = true;
-                initialResponseOutput.style.display = 'none';
-                renderMCQTest(data.mcq_questions);
-                chatInputGroup.classList.add('visible');
-                outputAndChat.scrollIntoView({ behavior: 'smooth', block: 'end' });
+
             } else {
-                updateInitialResponse("ERROR: INVALID RESPONSE FROM N8N.");
+                updateInitialResponse("ERROR: SESSION ID OR VALID RESPONSE NOT RECEIVED.");
             }
         } catch (error) {
             console.error('Error:', error);
@@ -753,26 +1016,36 @@
         }
     });
 
+    // NEW: Function to render MCQ test in batch mode
     function renderMCQTest(questions) {
-        outputAndChat.innerHTML = '';
+        outputAndChat.innerHTML = ''; // Clear previous content
         totalQuestions = questions.length;
-        score = 0;
-        questionsAnswered = 0;
+        score = 0; // Reset score for new test
+        userAnswers = {}; // Reset user answers for a new test
+
+        // Hide chat input, show submit button
+        chatInputGroup.classList.remove('visible');
+        mcqSubmitGroup.style.display = 'flex'; // Show the submit button group
+        submitMcqBtn.disabled = true; // Initially disabled
 
         questions.forEach((q, index) => {
             const questionDiv = document.createElement('div');
             questionDiv.classList.add('mcq-question');
+            questionDiv.setAttribute('data-question-index', index); // Add index for easy lookup
             questionDiv.innerHTML = `<div class="mcq-question-text">Q${index + 1}: ${q.question}</div>`;
 
             const optionsDiv = document.createElement('div');
             optionsDiv.classList.add('mcq-options');
             
-            q.options.forEach(option => {
+            q.options.forEach((optionText, optionIndex) => {
                 const optionButton = document.createElement('div');
                 optionButton.classList.add('mcq-option');
-                optionButton.innerText = option;
+                optionButton.innerText = optionText;
+                optionButton.setAttribute('data-option-index', optionIndex);
+                optionButton.setAttribute('data-question-index', index); // Redundant but safe
+
                 optionButton.addEventListener('click', () => {
-                    checkAnswer(optionButton, q, option, optionsDiv);
+                    handleOptionSelection(optionButton, index, optionText, optionsDiv);
                 });
                 optionsDiv.appendChild(optionButton);
             });
@@ -782,30 +1055,82 @@
         });
     }
 
-    function checkAnswer(selectedOption, questionData, selectedText, optionsDiv) {
-        Array.from(optionsDiv.children).forEach(option => {
-            option.classList.add('disabled');
-            option.style.pointerEvents = 'none';
+    // NEW: Handles selection of an option, stores it, updates UI
+    function handleOptionSelection(selectedOptionElement, questionIndex, selectedText, optionsContainer) {
+        // 1. Remove 'selected' class from all options for this question
+        Array.from(optionsContainer.children).forEach(option => {
+            option.classList.remove('selected');
         });
 
-        questionsAnswered++;
-        const correctText = questionData.correct_answer;
+        // 2. Add 'selected' class to the clicked option
+        selectedOptionElement.classList.add('selected');
 
-        if (selectedText === correctText) {
-            selectedOption.classList.add('correct');
-            score++;
-        } else {
-            selectedOption.classList.add('incorrect');
+        // 3. Store the user's answer
+        userAnswers[questionIndex] = selectedText;
+
+        // 4. Update submit button state
+        checkAllQuestionsAnswered();
+    }
+
+    // NEW: Checks if all questions have an answer and enables/disables submit button
+    function checkAllQuestionsAnswered() {
+        const answeredCount = Object.keys(userAnswers).length;
+        submitMcqBtn.disabled = (answeredCount !== totalQuestions);
+    }
+
+    // NEW: Function called on "Submit Quiz" button click
+    submitMcqBtn.addEventListener('click', () => {
+        submitQuiz();
+    });
+
+    function submitQuiz() {
+        score = 0; // Reset score before final evaluation
+
+        // Hide the submit button
+        mcqSubmitGroup.style.display = 'none';
+
+        // Iterate through all questions to check answers and update UI
+        document.querySelectorAll('.mcq-question').forEach((questionDiv, index) => {
+            const optionsDiv = questionDiv.querySelector('.mcq-options');
+            const selectedText = userAnswers[index]; // Get the user's stored answer for this question
+            
+            // Ensure we have the original question data for validation
+            const originalQuestionData = currentQuizQuestions[index]; 
+            if (!originalQuestionData) {
+                console.error(`Error: Could not find original question data for index ${index}`);
+                return;
+            }
+
+            // Disable all options for this question after submission
             Array.from(optionsDiv.children).forEach(option => {
-                if (option.innerText === correctText) {
-                    option.classList.add('correct');
+                option.classList.add('disabled');
+                option.style.pointerEvents = 'none'; // Prevent further clicks
+                option.classList.remove('selected'); // Remove any lingering 'selected' state
+            });
+
+            // Find the user's selected option and apply correct/incorrect classes
+            Array.from(optionsDiv.children).forEach(option => {
+                if (option.innerText === selectedText) {
+                    if (selectedText === originalQuestionData.correct_answer) {
+                        option.classList.add('correct');
+                        score++; // Increment score only for correct answers
+                    } else {
+                        option.classList.add('incorrect');
+                    }
+                }
+                // Also highlight the correct answer if it wasn't selected (for feedback)
+                if (option.innerText === originalQuestionData.correct_answer && option.innerText !== selectedText) {
+                    option.classList.add('correct'); // Highlight the correct answer
                 }
             });
-        }
+        });
 
-        if (questionsAnswered === totalQuestions) {
-            showResults();
-        }
+        // Display final results
+        showResults();
+
+        // Re-enable chat input after quiz submission
+        chatInputGroup.classList.add('visible');
+        chatInput.focus();
     }
 
     function showResults() {
@@ -813,6 +1138,7 @@
         resultsDiv.id = 'mcq-results';
         resultsDiv.innerHTML = `YOU SCORED ${score} OUT OF ${totalQuestions}!`;
         outputAndChat.appendChild(resultsDiv);
+        outputAndChat.scrollTop = outputAndChat.scrollHeight; // Scroll to results
     }
     
     const sendChatMessage = async () => {
@@ -826,11 +1152,14 @@
         sendBtn.disabled = true;
         chatInput.disabled = true;
 
+        // Ensure the chat input group is visible before starting the chat
+        chatInputGroup.classList.add('visible');
+
         try {
             const requestMoreQuestions = message.toLowerCase().includes('questions') || message.toLowerCase().includes('mcq');
             
-            if (requestMoreQuestions) {
-                outputAndChat.innerHTML = '';
+            if (requestMoreQuestions && currentMode === 'mcq') { // Only allow requesting more MCQs if current mode is MCQ
+                outputAndChat.innerHTML = ''; // Clear previous MCQs
                 addMessage('assistant', 'GENERATING MORE QUESTIONS...');
                 
                 const response = await fetch(initialGenerationWebhookUrl, {
@@ -841,7 +1170,7 @@
                     body: JSON.stringify({
                         sessionId: sessionId,
                         mode: 'mcq',
-                        difficulty: 'medium'
+                        difficulty: selectedDifficulty || 'medium' // Use selected difficulty or default to medium
                     })
                 });
 
@@ -851,13 +1180,14 @@
                 const data = await response.json();
                 
                 if (data && data.mcq_questions) {
+                    currentQuizQuestions = data.mcq_questions; // Store new questions
                     outputAndChat.innerHTML = '';
-                    renderMCQTest(data.mcq_questions);
+                    renderMCQTest(data.mcq_questions); // Render new set of MCQs
                 } else {
                     addMessage('assistant', "ERROR: COULD NOT GENERATE MORE QUESTIONS. PLEASE TRY AGAIN.");
                 }
 
-            } else {
+            } else { // Regular chat message
                 const response = await fetch(chatWebhookUrl, {
                     method: 'POST',
                     headers: {
@@ -884,6 +1214,7 @@
             sendBtn.disabled = false;
             chatInput.disabled = false;
             chatInput.focus();
+            outputAndChat.scrollTop = outputAndChat.scrollHeight; // Scroll to bottom after message
         }
     };
 
@@ -897,11 +1228,10 @@
     const addMessage = (sender, content) => {
         const messageDiv = document.createElement('div');
         messageDiv.classList.add('chat-message');
-        messageDiv.innerHTML = `<p><span class="sender">${sender === 'user' ? 'YOU' : 'ASSISTANT'}:</span><span class="content">${content}</span></p>`;
+        messageDiv.innerHTML = `<div class="sender">${sender.toUpperCase()}</div><div class="content">${content}</div>`;
         outputAndChat.appendChild(messageDiv);
         outputAndChat.scrollTop = outputAndChat.scrollHeight;
     };
 </script>
-
 </body>
 </html>
