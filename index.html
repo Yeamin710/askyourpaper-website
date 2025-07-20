@@ -349,30 +349,12 @@
             outline: none;
             border-color: var(--active-bg);
         }
-        #send-btn {
-            padding: 12px 20px;
-            border: 1px solid var(--button-border);
-            border-radius: 12px;
-            font-size: 1rem;
-            font-weight: 600;
-            background-color: transparent;
-            color: var(--main-text-color);
-            cursor: pointer;
-            transition: all 0.3s ease;
-            text-transform: uppercase;
+        /* Specific style for send button to override action-button padding */
+        #send-chat-btn.action-button {
+            padding: 12px 20px; /* Keep smaller padding for chat send button */
         }
-        #send-btn:hover:not(:disabled) { /* Added not(:disabled) */
-            transform: translateY(-2px);
-            background-color: var(--button-hover-bg);
-        }
-        #send-btn:disabled {
-            background-color: transparent;
-            color: var(--disabled-color);
-            border-color: var(--disabled-color);
-            cursor: not-allowed;
-            transform: translateY(0);
-            box-shadow: none;
-        }
+        /* Removed redundant #send-btn styles, now covered by .action-button */
+
         /* MCQ Difficulty Options */
         .mcq-options-container {
             display: none;
@@ -655,7 +637,7 @@
                 font-size: 0.9rem;
             }
 
-            #send-btn {
+            #send-chat-btn { /* Specific mobile style for send button */
                 width: 100%;
                 padding: 10px 15px;
                 font-size: 0.9rem;
@@ -700,7 +682,7 @@
                 font-size: 1.8rem;
             }
 
-            .action-button, #generate-btn, #send-btn, #url-upload-btn, .difficulty-button, #submit-mcq-btn {
+            .action-button, #generate-btn, #url-upload-btn, .difficulty-button, #submit-mcq-btn {
                 padding: 10px 15px;
                 font-size: 0.85rem;
             }
@@ -804,7 +786,7 @@
     </div>
 
     <div id="mcq-submit-group" class="button-group" style="display: none;">
-        <button id="submit-mcq-btn">SUBMIT QUIZ</button>
+        <button id="submit-mcq-btn" class="action-button">SUBMIT QUIZ</button> <!-- Added action-button class -->
     </div>
 
     <!-- Chat Section - Now always visible and acts as primary output -->
@@ -815,7 +797,7 @@
         </div>
         <div class="chat-input-container chat-input-group"> <!-- Added chat-input-group class for styling -->
             <input type="text" id="chat-input" class="chat-input" placeholder="ASK A QUESTION ABOUT THE DOCUMENT..." disabled>
-            <button id="send-chat-btn" disabled>SEND</button>
+            <button id="send-chat-btn" class="action-button" disabled>SEND</button> <!-- Added action-button class -->
         </div>
         <div class="loading-animation chat-loading" id="chat-loading-animation">
             <div class="dot"></div>
@@ -1037,7 +1019,7 @@
 
         try {
             const response = await fetch(initialGenerationWebhookUrl, fetchOptions);
-            let rawData = await response.json(); // Get the raw response
+            let rawData = await response.json(); // Get the raw data
 
             console.log("DEBUG: Backend Raw Response Data (from n8n):", rawData); // Log the full raw data for debugging
 
