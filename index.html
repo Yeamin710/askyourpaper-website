@@ -12,7 +12,7 @@
             --text-color: #CCCCCC;
             --main-text-color: #FFFFFF;
             --border-color: #333333;
-            --button-border: #666666; /* Ensure this variable exists and is used */
+            --button-border: #666666;
             --button-hover-bg: #222222;
             --shadow-color: rgba(0, 0, 0, 0.5);
             --disabled-color: #555555;
@@ -21,6 +21,11 @@
             --active-text: #000000;
             --active-glow: 0 0 20px rgba(255, 255, 255, 0.8), inset 0 0 10px rgba(255, 255, 255, 0.4);
             --hint-color: #888888;
+            --chat-user-bg: #007bff; /* Blue for user messages */
+            --chat-user-text: #FFFFFF;
+            --chat-ai-bg: #333333; /* Darker for AI messages */
+            --chat-ai-text: #FFFFFF;
+            --chat-border: #444444;
         }
         body {
             font-family: 'Roboto Mono', monospace;
@@ -277,24 +282,10 @@
             scroll-behavior: smooth;
             font-size: 0.95rem;
         }
-        #response-output { /* This ID seems unused based on initial-response-output */
+        #initial-response-output { /* Renamed from response-output for clarity */
             font-size: 16px;
             word-wrap: break-word;
             white-space: pre-wrap;
-        }
-        .chat-message {
-            margin-bottom: 15px;
-            line-height: 1.6;
-        }
-        .chat-message .sender {
-            font-weight: 600;
-            margin-bottom: 5px;
-            color: var(--main-text-color);
-            text-transform: uppercase;
-        }
-        .chat-message .content {
-            white-space: pre-wrap;
-            color: var(--text-color);
         }
         .loading-animation {
             display: flex;
@@ -302,6 +293,10 @@
             align-items: center;
             gap: 8px;
             display: none;
+            margin-top: 20px;
+        }
+        .loading-animation.visible {
+            display: flex;
         }
         .dot {
             width: 10px;
@@ -332,7 +327,7 @@
         }
         /* New styles for chat input */
         .chat-input-group {
-            display: none;
+            display: none; /* Hidden by default */
             gap: 10px;
             margin-top: 25px;
             transition: opacity 0.5s ease;
@@ -531,7 +526,7 @@
             color: var(--main-text-color);
             cursor: pointer;
             transition: all 0.3s ease;
-            box-shadow: 0 4-10px rgba(0, 0, 0, 0.2);
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
             text-transform: uppercase;
         }
         #upload-link-btn:hover {
@@ -793,16 +788,30 @@
         <button id="submit-mcq-btn">SUBMIT QUIZ</button>
     </div>
 
-    <div id="chat-input-group" class="chat-input-group">
-        <input type="text" id="chat-input" class="chat-input" placeholder="ASK A QUESTION ABOUT THE DOCUMENT...">
-        <button id="send-btn">SEND</button>
+    <!-- Chat Section - Initially Hidden -->
+    <div id="chat-section" class="chat-section hidden">
+        <h2 class="chat-header">Chat with Document</h2>
+        <div class="chat-output-area" id="chat-output-area">
+            <!-- Chat messages will be dynamically inserted here -->
+        </div>
+        <div class="chat-input-container">
+            <input type="text" id="chat-input" class="chat-input" placeholder="ASK A QUESTION ABOUT THE DOCUMENT..." disabled>
+            <button id="send-chat-btn" disabled>SEND</button>
+        </div>
+        <div class="loading-animation chat-loading" id="chat-loading-animation">
+            <div class="dot"></div>
+            <div class="dot"></div>
+            <div class="dot"></div>
+            <span class="loading-text">AI is typing...</span>
+        </div>
+        <div class="error-message chat-error-message" id="chat-error-message"></div>
     </div>
 </div>
 
 <script>
     // IMPORTANT: Replace with your actual N8N webhook URLs
-    const initialGenerationWebhookUrl = "YOUR_INITIAL_GENERATION_WEBHOOK_URL_HERE";
-    const chatWebhookUrl = "YOUR_CHAT_WEBHOOK_URL_HERE";
+    const initialGenerationWebhookUrl = "https://n8n-3rkg.onrender.com/webhook-test/process-document";
+    const chatWebhookUrl = "https://n8n-3rkg.onrender.com/webhook-test/chat-query";
 
     const fileInput = document.getElementById('file-upload');
     const fileNameDisplay = document.getElementById('file-name-display');
@@ -814,9 +823,6 @@
     const actionInstruction = document.getElementById('action-instruction');
     const outputAndChat = document.getElementById('output-and-chat');
     const initialResponseOutput = document.getElementById('initial-response-output');
-    const chatInputGroup = document.getElementById('chat-input-group');
-    const chatInput = document.getElementById('chat-input');
-    const sendBtn = document.getElementById('send-btn');
     const mcqOptionsContainer = document.getElementById('mcq-options');
     const difficultyButtons = document.querySelectorAll('.difficulty-button');
     
@@ -829,14 +835,22 @@
     const mcqSubmitGroup = document.getElementById('mcq-submit-group');
     const submitMcqBtn = document.getElementById('submit-mcq-btn');
 
+    // NEW: Chat specific elements
+    const chatSection = document.getElementById('chat-section');
+    const chatOutputArea = document.getElementById('chat-output-area');
+    const chatInput = document.getElementById('chat-input');
+    const sendChatBtn = document.getElementById('send-chat-btn'); // Renamed from sendBtn to avoid conflict
+    const chatLoadingAnimation = document.getElementById('chat-loading-animation');
+    const chatErrorMessage = document.getElementById('chat-error-message');
+
 
     let selectedFile = null;
     let selectedUrl = null;
     let currentMode = null;
     let selectedDifficulty = null;
-    let sessionId = null;
-    let isChatActive = false; // Tracks if a chat session is active (post-initial generation)
-    
+    let sessionId = null; // Stores the session ID received from backend
+    let isChatLoading = false; // Tracks if chat message is being sent
+
     // NEW: MCQ state variables
     let score = 0;
     let totalQuestions = 0;
@@ -866,7 +880,7 @@
             
             // Hide submit button and chat input when changing mode
             mcqSubmitGroup.style.display = 'none';
-            chatInputGroup.classList.remove('visible');
+            chatSection.classList.add('hidden'); // Hide chat section
             initialResponseOutput.style.display = 'block'; // Show initial message again
 
             if (currentMode === 'mcq') {
@@ -950,288 +964,292 @@
             updateInitialResponse("PLEASE UPLOAD A FILE OR PROVIDE A URL AND SELECT AN ACTION.");
             return;
         }
-        if (currentMode === 'mcq' && selectedDifficulty === null) {
-              updateInitialResponse("PLEASE SELECT A DIFFICULTY LEVEL.");
-            return;
+
+        // Reset output area and hide chat/MCQ elements
+        outputAndChat.innerHTML = '<p id="initial-response-output" class="chat-message"><span class="sender">ASSISTANT</span><span class="content">Generating...</span></p>';
+        loadingIndicator.classList.add('visible');
+        generateBtn.disabled = true;
+        actionButtons.forEach(btn => btn.disabled = true);
+        urlUploadBtn.disabled = true;
+        fileInput.disabled = true;
+        urlInput.disabled = true;
+        mcqOptionsContainer.classList.remove('visible');
+        mcqSubmitGroup.style.display = 'none';
+        chatSection.classList.add('hidden'); // Ensure chat section is hidden on new generation
+
+        let formData = new FormData();
+        let originalFilename = '';
+        let requestBody = {}; // For JSON payload
+
+        // If a session ID already exists (e.g., from a previous interaction), pass it along
+        if (sessionId) {
+            requestBody.sessionId = sessionId;
+            formData.append('sessionId', sessionId);
         }
 
-        generateBtn.disabled = true;
-        loadingIndicator.style.display = 'flex';
-        updateInitialResponse("GENERATING...");
+        if (selectedFile) {
+            formData.append('file', selectedFile);
+            originalFilename = selectedFile.name;
+        } else if (selectedUrl) {
+            requestBody.url = selectedUrl; // Changed from pdf_url to url for n8n webhook consistency
+            originalFilename = selectedUrl.substring(selectedUrl.lastIndexOf('/') + 1) || 'url_document.pdf';
+        }
 
-        // Hide chat input and MCQ submit button during generation
-        chatInputGroup.classList.remove('visible');
-        mcqSubmitGroup.style.display = 'none';
+        requestBody.mode = currentMode; // Changed from original_mode to mode for n8n webhook consistency
+        requestBody.filename = originalFilename; // Changed from original_filename to filename for n8n webhook consistency
+        if (currentMode === 'mcq') {
+            requestBody.difficulty = selectedDifficulty;
+        }
+
+        let fetchOptions = {
+            method: 'POST',
+        };
+
+        if (selectedFile) {
+            // For file uploads, append other data to FormData
+            for (const key in requestBody) {
+                formData.append(key, requestBody[key]);
+            }
+            fetchOptions.body = formData;
+        } else {
+            fetchOptions.headers = {
+                'Content-Type': 'application/json'
+            };
+            fetchOptions.body = JSON.stringify(requestBody);
+        }
 
         try {
-            const formData = new FormData();
-            if (selectedFile) {
-                formData.append('file', selectedFile);
-            } else if (selectedUrl) {
-                formData.append('url', selectedUrl);
-            }
-            formData.append('mode', currentMode);
-            if (currentMode === 'mcq') {
-                formData.append('difficulty', selectedDifficulty);
-            }
-
-            const response = await fetch(initialGenerationWebhookUrl, {
-                method: 'POST',
-                body: formData
-            });
-
-            if (!response.ok) {
-                throw new Error(`HTTP error! Status: ${response.status}`);
-            }
-
+            const response = await fetch(initialGenerationWebhookUrl, fetchOptions);
             const data = await response.json();
-            
-            if (data && data.sessionId) {
-                sessionId = data.sessionId;
-                isChatActive = true;
-                initialResponseOutput.style.display = 'none'; // Hide initial message
 
-                if (currentMode === 'mcq' && data.mcq_questions) {
-                    currentQuizQuestions = data.mcq_questions; // Store questions for later validation
-                    renderMCQTest(currentQuizQuestions);
-                    // chatInputGroup will be shown after MCQ submission
-                } else if (data.text) { // For summarize and highlights
-                    addMessage('assistant', data.text);
-                    chatInputGroup.classList.add('visible'); // Show chat input for text modes
-                    chatInput.focus();
-                } else {
-                    updateInitialResponse("ERROR: INVALID RESPONSE FROM N8N.");
+            loadingIndicator.classList.remove('visible');
+            generateBtn.disabled = false;
+            actionButtons.forEach(btn => btn.disabled = false);
+            urlUploadBtn.disabled = false;
+            fileInput.disabled = false;
+            urlInput.disabled = false;
+
+            if (response.ok) {
+                sessionId = data.sessionId; // Store the session ID from n8n response
+                console.log("Session ID received:", sessionId);
+
+                if (currentMode === 'summarize') {
+                    outputAndChat.innerHTML = `<p class="chat-message"><span class="sender">ASSISTANT (SUMMARY)</span><span class="content">${data.summary || 'No summary generated.'}</span></p>`;
+                } else if (currentMode === 'highlights') {
+                    outputAndChat.innerHTML = `<p class="chat-message"><span class="sender">ASSISTANT (HIGHLIGHTS)</span><span class="content">${data.highlights || 'No highlights generated.'}</span></p>`;
+                } else if (currentMode === 'mcq') {
+                    currentQuizQuestions = data.mcqs || [];
+                    if (currentQuizQuestions.length > 0) {
+                        displayMCQQuiz(currentQuizQuestions);
+                        mcqSubmitGroup.style.display = 'flex'; // Show submit button
+                    } else {
+                        outputAndChat.innerHTML = `<p class="chat-message"><span class="sender">ASSISTANT (MCQ)</span><span class="content">No MCQs generated.</span></p>`;
+                    }
                 }
-                outputAndChat.scrollIntoView({ behavior: 'smooth', block: 'end' });
+                
+                // After successful generation, enable and show the chat section
+                chatSection.classList.remove('hidden');
+                chatInput.disabled = false;
+                sendChatBtn.disabled = false;
+                chatInput.focus(); // Focus on the chat input for immediate use
+                displayChatMessage('ai', "Hello! I've processed your document. What would you like to ask about it?");
+
 
             } else {
-                updateInitialResponse("ERROR: SESSION ID OR VALID RESPONSE NOT RECEIVED.");
+                updateInitialResponse(`ERROR: ${data.error || 'Something went wrong.'}`);
+                console.error('Backend Error:', data.error);
+                // Keep chat disabled on error
+                chatSection.classList.add('hidden');
+                chatInput.disabled = true;
+                sendChatBtn.disabled = true;
             }
         } catch (error) {
-            console.error('Error:', error);
-            updateInitialResponse(`AN ERROR OCCURRED: ${error.message}`);
-        } finally {
+            loadingIndicator.classList.remove('visible');
             generateBtn.disabled = false;
-            loadingIndicator.style.display = 'none';
+            actionButtons.forEach(btn => btn.disabled = false);
+            urlUploadBtn.disabled = false;
+            fileInput.disabled = false;
+            urlInput.disabled = false;
+            updateInitialResponse(`NETWORK ERROR: ${error.message}. PLEASE CHECK YOUR CONNECTION OR BACKEND URL.`);
+            console.error('Network or Fetch Error:', error);
+            // Keep chat disabled on error
+            chatSection.classList.add('hidden');
+            chatInput.disabled = true;
+            sendChatBtn.disabled = true;
         }
     });
 
-    // NEW: Function to render MCQ test in batch mode
-    function renderMCQTest(questions) {
-        outputAndChat.innerHTML = ''; // Clear previous content
-        totalQuestions = questions.length;
-        score = 0; // Reset score for new test
-        userAnswers = {}; // Reset user answers for a new test
+    // --- MCQ Quiz Logic ---
+    function displayMCQQuiz(mcqs) {
+        outputAndChat.innerHTML = ''; // Clear previous output
+        score = 0;
+        totalQuestions = mcqs.length;
+        userAnswers = {}; // Reset user answers
 
-        // Hide chat input, show submit button
-        chatInputGroup.classList.remove('visible');
-        mcqSubmitGroup.style.display = 'flex'; // Show the submit button group
-        submitMcqBtn.disabled = true; // Initially disabled
-
-        questions.forEach((q, index) => {
+        mcqs.forEach((mcq, qIndex) => {
             const questionDiv = document.createElement('div');
             questionDiv.classList.add('mcq-question');
-            questionDiv.setAttribute('data-question-index', index); // Add index for easy lookup
-            questionDiv.innerHTML = `<div class="mcq-question-text">Q${index + 1}: ${q.question}</div>`;
+            questionDiv.innerHTML = `<div class="mcq-question-text">Q${qIndex + 1}: ${mcq.question}</div>`;
 
             const optionsDiv = document.createElement('div');
             optionsDiv.classList.add('mcq-options');
-            
-            q.options.forEach((optionText, optionIndex) => {
-                const optionButton = document.createElement('div');
-                optionButton.classList.add('mcq-option');
-                optionButton.innerText = optionText;
-                optionButton.setAttribute('data-option-index', optionIndex);
-                optionButton.setAttribute('data-question-index', index); // Redundant but safe
 
-                optionButton.addEventListener('click', () => {
-                    handleOptionSelection(optionButton, index, optionText, optionsDiv);
-                });
-                optionsDiv.appendChild(optionButton);
+            mcq.options.forEach((optionText, optIndex) => {
+                const optionElement = document.createElement('div');
+                optionElement.classList.add('mcq-option');
+                optionElement.textContent = optionText;
+                optionElement.dataset.qIndex = qIndex;
+                optionElement.dataset.optIndex = optIndex;
+                optionElement.addEventListener('click', handleOptionSelect);
+                optionsDiv.appendChild(optionElement);
             });
-
             questionDiv.appendChild(optionsDiv);
             outputAndChat.appendChild(questionDiv);
         });
     }
 
-    // NEW: Handles selection of an option, stores it, updates UI
-    function handleOptionSelection(selectedOptionElement, questionIndex, selectedText, optionsContainer) {
-        // 1. Remove 'selected' class from all options for this question
-        Array.from(optionsContainer.children).forEach(option => {
-            option.classList.remove('selected');
-        });
+    function handleOptionSelect(event) {
+        const selectedOption = event.target;
+        const qIndex = selectedOption.dataset.qIndex;
 
-        // 2. Add 'selected' class to the clicked option
-        selectedOptionElement.classList.add('selected');
+        // Remove 'selected' class from other options for this question
+        const optionsForThisQuestion = document.querySelectorAll(`.mcq-question[data-q-index="${qIndex}"] .mcq-option`);
+        optionsForThisQuestion.forEach(opt => opt.classList.remove('selected'));
 
-        // 3. Store the user's answer
-        userAnswers[questionIndex] = selectedText;
-
-        // 4. Update submit button state
-        checkAllQuestionsAnswered();
+        // Add 'selected' class to the clicked option
+        selectedOption.classList.add('selected');
+        userAnswers[qIndex] = selectedOption.textContent; // Store the selected answer
     }
 
-    // NEW: Checks if all questions have an answer and enables/disables submit button
-    function checkAllQuestionsAnswered() {
-        const answeredCount = Object.keys(userAnswers).length;
-        submitMcqBtn.disabled = (answeredCount !== totalQuestions);
-    }
-
-    // NEW: Function called on "Submit Quiz" button click
     submitMcqBtn.addEventListener('click', () => {
-        submitQuiz();
-    });
+        score = 0;
+        outputAndChat.innerHTML = ''; // Clear quiz display
 
-    function submitQuiz() {
-        score = 0; // Reset score before final evaluation
-
-        // Hide the submit button
-        mcqSubmitGroup.style.display = 'none';
-
-        // Iterate through all questions to check answers and update UI
-        document.querySelectorAll('.mcq-question').forEach((questionDiv, index) => {
-            const optionsDiv = questionDiv.querySelector('.mcq-options');
-            const selectedText = userAnswers[index]; // Get the user's stored answer for this question
+        currentQuizQuestions.forEach((mcq, qIndex) => {
+            const questionDiv = document.createElement('div');
+            questionDiv.classList.add('mcq-question');
+            questionDiv.innerHTML = `<div class="mcq-question-text">Q${qIndex + 1}: ${mcq.question}</div>`;
             
-            // Ensure we have the original question data for validation
-            const originalQuestionData = currentQuizQuestions[index]; 
-            if (!originalQuestionData) {
-                console.error(`Error: Could not find original question data for index ${index}`);
-                return;
+            const optionsDiv = document.createElement('div');
+            optionsDiv.classList.add('mcq-options');
+
+            mcq.options.forEach((optionText, optIndex) => {
+                const optionElement = document.createElement('div');
+                optionElement.classList.add('mcq-option', 'disabled'); // Disable after submission
+                optionElement.textContent = optionText;
+
+                // Check if the option text starts with the correct answer prefix (e.g., "A)")
+                const isCorrect = optionText.startsWith(mcq.correct_answer + ")");
+                const isUserSelected = userAnswers[qIndex] === optionText;
+
+                if (isCorrect) {
+                    optionElement.classList.add('correct');
+                }
+                if (isUserSelected && !isCorrect) {
+                    optionElement.classList.add('incorrect');
+                }
+                optionsDiv.appendChild(optionElement);
+            });
+            questionDiv.appendChild(optionsDiv);
+            outputAndChat.appendChild(questionDiv);
+
+            // Calculate score
+            const selectedAnswerForQuestion = userAnswers[qIndex];
+            // Find the full text of the correct option based on the correct_answer letter
+            const correctOptionText = mcq.options.find(opt => opt.startsWith(mcq.correct_answer + ")"));
+            if (selectedAnswerForQuestion === correctOptionText) {
+                score++;
             }
-
-            // Disable all options for this question after submission
-            Array.from(optionsDiv.children).forEach(option => {
-                option.classList.add('disabled');
-                option.style.pointerEvents = 'none'; // Prevent further clicks
-                option.classList.remove('selected'); // Remove any lingering 'selected' state
-            });
-
-            // Find the user's selected option and apply correct/incorrect classes
-            Array.from(optionsDiv.children).forEach(option => {
-                if (option.innerText === selectedText) {
-                    if (selectedText === originalQuestionData.correct_answer) {
-                        option.classList.add('correct');
-                        score++; // Increment score only for correct answers
-                    } else {
-                        option.classList.add('incorrect');
-                    }
-                }
-                // Also highlight the correct answer if it wasn't selected (for feedback)
-                if (option.innerText === originalQuestionData.correct_answer && option.innerText !== selectedText) {
-                    option.classList.add('correct'); // Highlight the correct answer
-                }
-            });
         });
 
-        // Display final results
-        showResults();
-
-        // Re-enable chat input after quiz submission
-        chatInputGroup.classList.add('visible');
-        chatInput.focus();
-    }
-
-    function showResults() {
         const resultsDiv = document.createElement('div');
         resultsDiv.id = 'mcq-results';
-        resultsDiv.innerHTML = `YOU SCORED ${score} OUT OF ${totalQuestions}!`;
+        resultsDiv.textContent = `YOUR SCORE: ${score} / ${totalQuestions}`;
         outputAndChat.appendChild(resultsDiv);
-        outputAndChat.scrollTop = outputAndChat.scrollHeight; // Scroll to results
-    }
-    
-    const sendChatMessage = async () => {
-        const message = chatInput.value.trim();
-        if (!message || !sessionId || !isChatActive) {
-            return;
-        }
-        
-        addMessage('user', message);
-        chatInput.value = '';
-        sendBtn.disabled = true;
-        chatInput.disabled = true;
 
-        // Ensure the chat input group is visible before starting the chat
-        chatInputGroup.classList.add('visible');
+        mcqSubmitGroup.style.display = 'none'; // Hide submit button after submission
+    });
+
+    // --- Chat Logic ---
+    function displayChatMessage(sender, message) {
+        const messageBubble = document.createElement('div');
+        messageBubble.classList.add('chat-message-bubble', sender); // 'user' or 'ai'
+
+        const span = document.createElement('span');
+        span.textContent = message;
+        messageBubble.appendChild(span);
+
+        chatOutputArea.appendChild(messageBubble);
+        chatOutputArea.scrollTop = chatOutputArea.scrollHeight; // Auto-scroll to bottom
+    }
+
+    async function handleSendChat() {
+        const userMessage = chatInput.value.trim();
+        if (!userMessage || !sessionId || isChatLoading) {
+            return; // Don't send empty messages, or if no session, or if already loading
+        }
+
+        displayChatMessage('user', userMessage);
+        chatInput.value = ''; // Clear input field
+        chatErrorMessage.classList.remove('visible'); // Hide any previous error
+
+        isChatLoading = true;
+        chatInput.disabled = true;
+        sendChatBtn.disabled = true;
+        chatLoadingAnimation.classList.add('visible');
 
         try {
-            const requestMoreQuestions = message.toLowerCase().includes('questions') || message.toLowerCase().includes('mcq');
-            
-            if (requestMoreQuestions && currentMode === 'mcq') { // Only allow requesting more MCQs if current mode is MCQ
-                outputAndChat.innerHTML = ''; // Clear previous MCQs
-                addMessage('assistant', 'GENERATING MORE QUESTIONS...');
-                
-                const response = await fetch(initialGenerationWebhookUrl, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
-                        sessionId: sessionId,
-                        mode: 'mcq',
-                        difficulty: selectedDifficulty || 'medium' // Use selected difficulty or default to medium
-                    })
-                });
+            const response = await fetch(chatWebhookUrl, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    sessionId: sessionId,
+                    query: userMessage,
+                    filename: fileNameDisplay.innerText.replace('FILE SELECTED: ', '').replace('URL SELECTED: ', '').replace('NO FILE SELECTED.', '').replace('NO URL SELECTED.', '') // Pass filename for n8n to retrieve context
+                }),
+            });
 
-                if (!response.ok) {
-                    throw new Error(`HTTP error! Status: ${response.status}`);
-                }
-                const data = await response.json();
-                
-                if (data && data.mcq_questions) {
-                    currentQuizQuestions = data.mcq_questions; // Store new questions
-                    outputAndChat.innerHTML = '';
-                    renderMCQTest(data.mcq_questions); // Render new set of MCQs
-                } else {
-                    addMessage('assistant', "ERROR: COULD NOT GENERATE MORE QUESTIONS. PLEASE TRY AGAIN.");
-                }
-
-            } else { // Regular chat message
-                const response = await fetch(chatWebhookUrl, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({ message: message, sessionId: sessionId }),
-                });
-
-                if (!response.ok) {
-                    throw new Error(`HTTP error! Status: ${response.status}`);
-                }
-                const data = await response.json();
-                if (data && data.text) {
-                    addMessage('assistant', data.text);
-                } else {
-                    addMessage('assistant', "ERROR: INVALID RESPONSE FROM N8N.");
-                }
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({ message: 'Unknown error' }));
+                throw new Error(`HTTP error! Status: ${response.status}, Message: ${errorData.message || JSON.stringify(errorData)}`);
             }
 
-        } catch (error) {
-            console.error('Error:', error);
-            addMessage('assistant', `AN ERROR OCCURRED: ${error.message}`);
-        } finally {
-            sendBtn.disabled = false;
-            chatInput.disabled = false;
-            chatInput.focus();
-            outputAndChat.scrollTop = outputAndChat.scrollHeight; // Scroll to bottom after message
-        }
-    };
+            const data = await response.json();
+            const aiResponse = data.response || "I couldn't get a clear answer. Please try rephrasing your question.";
+            displayChatMessage('ai', aiResponse);
 
-    sendBtn.addEventListener('click', sendChatMessage);
-    chatInput.addEventListener('keypress', (e) => {
-        if (e.key === 'Enter') {
-            sendChatMessage();
+        } catch (error) {
+            console.error("Error sending chat message:", error);
+            chatErrorMessage.textContent = `Error: ${error.message}. Please try again.`;
+            chatErrorMessage.classList.add('visible');
+            displayChatMessage('ai', `Sorry, I encountered an error: "${error.message}". Please try again.`);
+        } finally {
+            isChatLoading = false;
+            chatInput.disabled = false;
+            sendChatBtn.disabled = false;
+            chatLoadingAnimation.classList.remove('visible');
+            chatInput.focus(); // Keep focus on chat input
+        }
+    }
+
+    // Event Listeners for Chat Input
+    sendChatBtn.addEventListener('click', handleSendChat);
+
+    chatInput.addEventListener('keypress', (event) => {
+        if (event.key === 'Enter' && !isChatLoading) {
+            handleSendChat();
         }
     });
 
-    const addMessage = (sender, content) => {
-        const messageDiv = document.createElement('div');
-        messageDiv.classList.add('chat-message');
-        messageDiv.innerHTML = `<div class="sender">${sender.toUpperCase()}</div><div class="content">${content}</div>`;
-        outputAndChat.appendChild(messageDiv);
-        outputAndChat.scrollTop = outputAndChat.scrollHeight;
-    };
+    // Initial state setup
+    document.addEventListener('DOMContentLoaded', () => {
+        updateButtonState();
+        // Ensure initial-response-output content is correctly set at start
+        initialResponseOutput.innerHTML = '<p class="chat-message"><span class="sender">ASSISTANT</span><span class="content">SELECT AN ACTION AND UPLOAD A DOCUMENT TO GET STARTED.</span></p>';
+    });
+
 </script>
 </body>
 </html>
