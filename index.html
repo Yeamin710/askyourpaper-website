@@ -923,6 +923,18 @@
     fileInput.addEventListener('change', (event) => {
         const file = event.target.files[0];
         if (file) {
+            // --- NEW: File size check ---
+            const MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024; // 10 MB in bytes
+            if (file.size > MAX_FILE_SIZE_BYTES) {
+                fileNameDisplay.innerText = "FILE TOO LARGE. MAX 10MB.";
+                displayChatMessage('ai', "ERROR: File size exceeds 10MB limit. Please choose a smaller file.");
+                selectedFile = null; // Clear selected file
+                fileInput.value = ''; // Clear input to allow re-selection
+                updateButtonState();
+                return; // Stop processing
+            }
+            // --- END NEW ---
+
             selectedFile = file;
             selectedUrl = null;
             urlInput.value = '';
