@@ -125,7 +125,7 @@
             transition: all 0.3s ease;
             box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
             text-transform: uppercase;
-            width: 100%;
+            width: 100%; /* Default for action-button */
             box-sizing: border-box;
         }
         .action-button:hover:not(:disabled) {
@@ -217,7 +217,7 @@
         }
         .url-input {
             flex-grow: 1;
-            padding: 12px 18px;
+            padding: 12px 18px; /* Standard padding for input */
             border: 1px solid var(--border-color);
             border-radius: 12px;
             background-color: rgba(255, 255, 255, 0.05);
@@ -327,11 +327,12 @@
         }
         /* New styles for chat input */
         .chat-input-group {
-            display: flex; /* Changed to flex to always show, but disabled */
+            display: flex;
             gap: 10px;
             margin-top: 25px;
             transition: opacity 0.5s ease;
             flex-direction: row;
+            align-items: center; /* Vertically align items in the flex container */
         }
         .chat-input {
             flex-grow: 1;
@@ -341,6 +342,8 @@
             background-color: rgba(255, 255, 255, 0.05);
             color: var(--main-text-color);
             font-size: 1rem;
+            height: 48px; /* Explicit height to match button */
+            box-sizing: border-box; /* Include padding and border in height */
         }
         .chat-input::placeholder {
             color: var(--disabled-color);
@@ -349,9 +352,14 @@
             outline: none;
             border-color: var(--active-bg);
         }
-        /* Specific style for send button to override action-button padding */
-        #send-chat-btn.action-button {
-            padding: 12px 20px; /* Keep smaller padding for chat send button */
+        /* Specific style for send button to match chat input height and prevent excessive width */
+        #send-chat-btn {
+            padding: 12px 20px; /* Consistent vertical padding */
+            width: auto; /* Allow width to be determined by content */
+            flex-grow: 0; /* Prevent it from growing */
+            flex-shrink: 0; /* Prevent it from shrinking */
+            height: 48px; /* Explicit height to match input */
+            box-sizing: border-box; /* Include padding and border in height */
         }
         /* Removed redundant #send-btn styles, now covered by .action-button */
 
@@ -635,12 +643,14 @@
             .chat-input {
                 padding: 10px 15px;
                 font-size: 0.9rem;
+                height: 40px; /* Adjusted for mobile */
             }
 
             #send-chat-btn { /* Specific mobile style for send button */
                 width: 100%;
                 padding: 10px 15px;
                 font-size: 0.9rem;
+                height: 40px; /* Adjusted for mobile */
             }
 
             .mcq-question-text {
@@ -810,9 +820,9 @@
 </div>
 
 <script>
-    // IMPORTANT: Replace with your actual N8N webhook URLs
-    const initialGenerationWebhookUrl = "https://n8n-3rkg.onrender.com/webhook-test/process-document";
-    const chatWebhookUrl = "https://n8n-3rkg.onrender.com/webhook-test/chat-query"; // Ensure this is correct for chat!
+    // IMPORTANT: Updated to use production webhook URLs
+    const initialGenerationWebhookUrl = "https://n8n-3rkg.onrender.com/webhook/process-document";
+    const chatWebhookUrl = "https://n8n-3rkg.onrender.com/webhook/chat-query";
 
     const fileInput = document.getElementById('file-upload');
     const fileNameDisplay = document.getElementById('file-name-display');
