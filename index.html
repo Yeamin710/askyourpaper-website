@@ -1039,16 +1039,21 @@
             console.log("Backend Raw Response Data:", rawData); // Log the full raw response for debugging
 
             // IMPORTANT: Process the data received from n8n
-            let data = rawData; // Assuming rawData is now directly the object, not an array
+            // The data is now directly the object, not an array.
+            let processedData = {};
+            if (rawData && typeof rawData === 'object') {
+                processedData.sessionId = rawData["Session ID"]; // Access with space
+                processedData.filename = rawData["Filename"];
+                processedData.fullText = rawData["Full Text"]; // Note the space
+                processedData.summary = rawData["Summary"];
+                processedData.highlights = rawData["Highlights"];
+                processedData.mcqs = rawData["MCQs"];
+            } else {
+                console.error("Unexpected rawData format:", rawData);
+                processedData = { error: "Unexpected response format from backend." };
+            }
             
-            // Map capitalized keys to expected frontend camelCase/lowercase
-            data.sessionId = data["Session ID"]; // Access with space
-            data.filename = data["Filename"];
-            data.summary = data["Summary"];
-            data.highlights = data["Highlights"];
-            data.mcqs = data["MCQs"];
-            
-            console.log("Frontend Processed Data:", data); // Log the processed data
+            console.log("Frontend Processed Data:", processedData); // Log the processed data
 
             loadingIndicator.classList.remove('visible');
             generateBtn.disabled = false;
@@ -1058,18 +1063,18 @@
             urlInput.disabled = false;
 
             if (response.ok) {
-                sessionId = data.sessionId; // Store the session ID
+                sessionId = processedData.sessionId; // Store the session ID
                 console.log("Session ID received:", sessionId);
 
                 // Clear "Generating..." message before displaying actual content
                 chatOutputArea.innerHTML = ''; 
 
                 if (currentMode === 'summarize') {
-                    displayChatMessage('ai', `SUMMARY:\n${data.summary || 'No summary generated.'}`);
+                    displayChatMessage('ai', `SUMMARY:\n${processedData.summary || 'No summary generated.'}`);
                 } else if (currentMode === 'highlight') {
-                    displayChatMessage('ai', `HIGHLIGHTS:\n${data.highlights || 'No highlights generated.'}`);
+                    displayChatMessage('ai', `HIGHLIGHTS:\n${processedData.highlights || 'No highlights generated.'}`);
                 } else if (currentMode === 'mcq') {
-                    currentQuizQuestions = data.mcqs || [];
+                    currentQuizQuestions = processedData.mcqs || [];
                     if (currentQuizQuestions.length > 0) {
                         displayMCQQuiz(currentQuizQuestions); 
                         mcqSubmitGroup.style.display = 'flex'; // Show submit button
@@ -1086,8 +1091,8 @@
 
 
             } else {
-                displayChatMessage('ai', `ERROR: ${data.error || 'Something went wrong.'}`);
-                console.error('Backend Error:', data.error);
+                displayChatMessage('ai', `ERROR: ${processedData.error || 'Something went wrong.'}`);
+                console.error('Backend Error:', processedData.error);
                 // Keep chat disabled on error
                 chatInput.disabled = true;
                 sendChatBtn.disabled = true;
@@ -1206,6 +1211,7 @@
 
     // --- Chat Logic ---
     function displayChatMessage(sender, message) {
+        console.log(`DEBUG: displayChatMessage called. Sender: ${sender}, Message (first 100 chars): ${message.substring(0, Math.min(message.length, 100))}`); // New debug line
         const messageBubble = document.createElement('div');
         messageBubble.classList.add('chat-message-bubble', sender); // 'user' or 'ai'
 
@@ -1215,6 +1221,7 @@
 
         chatOutputArea.appendChild(messageBubble);
         chatOutputArea.scrollTop = chatOutputArea.scrollHeight; // Auto-scroll to bottom
+        console.log("DEBUG: chatOutputArea content after append (first 200 chars):", chatOutputArea.innerHTML.substring(0, Math.min(chatOutputArea.innerHTML.length, 200))); // New debug line
     }
 
     async function handleSendChat() {
