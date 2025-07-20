@@ -977,7 +977,10 @@
         }
 
         // Clear chat area and display "Generating..." message
-        chatOutputArea.innerHTML = ''; 
+        while (chatOutputArea.firstChild) { // Robust clearing
+            chatOutputArea.removeChild(chatOutputArea.firstChild);
+        }
+        chatOutputArea.scrollTop = 0; // Reset scroll
         displayChatMessage('ai', "Generating..."); 
         loadingIndicator.classList.add('visible');
         generateBtn.disabled = true;
@@ -1036,7 +1039,7 @@
             const response = await fetch(initialGenerationWebhookUrl, fetchOptions);
             let rawData = await response.json(); // Get the raw response
 
-            console.log("Backend Raw Response Data:", rawData); // Log the full raw response for debugging
+            console.log("DEBUG: Backend Raw Response Data (from n8n):", rawData); // Log the full raw response for debugging
 
             // IMPORTANT: Process the data received from n8n
             // The data is now directly the object, not an array.
@@ -1049,11 +1052,11 @@
                 processedData.highlights = rawData["Highlights"];
                 processedData.mcqs = rawData["MCQs"];
             } else {
-                console.error("Unexpected rawData format:", rawData);
+                console.error("DEBUG: Unexpected rawData format:", rawData);
                 processedData = { error: "Unexpected response format from backend." };
             }
             
-            console.log("Frontend Processed Data:", processedData); // Log the processed data
+            console.log("DEBUG: Frontend Processed Data:", processedData); // Log the processed data
 
             loadingIndicator.classList.remove('visible');
             generateBtn.disabled = false;
@@ -1064,18 +1067,26 @@
 
             if (response.ok) {
                 sessionId = processedData.sessionId; // Store the session ID
-                console.log("Session ID received:", sessionId);
+                console.log("DEBUG: Session ID received:", sessionId);
 
                 // Clear "Generating..." message before displaying actual content
-                chatOutputArea.innerHTML = ''; 
+                while (chatOutputArea.firstChild) { // Robust clearing
+                    chatOutputArea.removeChild(chatOutputArea.firstChild);
+                }
+                chatOutputArea.scrollTop = 0; // Reset scroll
+                console.log("DEBUG: chatOutputArea cleared. Current innerHTML:", chatOutputArea.innerHTML); // Debug clear
+
 
                 if (currentMode === 'summarize') {
+                    console.log("DEBUG: Attempting to display summary. Summary content:", processedData.summary); // New debug
                     displayChatMessage('ai', `SUMMARY:\n${processedData.summary || 'No summary generated.'}`);
                 } else if (currentMode === 'highlight') {
+                    console.log("DEBUG: Attempting to display highlights. Highlights content:", processedData.highlights); // New debug
                     displayChatMessage('ai', `HIGHLIGHTS:\n${processedData.highlights || 'No highlights generated.'}`);
                 } else if (currentMode === 'mcq') {
                     currentQuizQuestions = processedData.mcqs || [];
                     if (currentQuizQuestions.length > 0) {
+                        console.log("DEBUG: Attempting to display MCQs. Number of MCQs:", currentQuizQuestions.length); // New debug
                         displayMCQQuiz(currentQuizQuestions); 
                         mcqSubmitGroup.style.display = 'flex'; // Show submit button
                     } else {
@@ -1114,7 +1125,10 @@
 
     // --- MCQ Quiz Logic ---
     function displayMCQQuiz(mcqs) {
-        chatOutputArea.innerHTML = ''; // Clear chat area for quiz
+        while (chatOutputArea.firstChild) { // Robust clearing
+            chatOutputArea.removeChild(chatOutputArea.firstChild);
+        }
+        chatOutputArea.scrollTop = 0; // Reset scroll
         displayChatMessage('ai', "Here is your MCQ quiz:"); // Announce the quiz
 
         score = 0;
@@ -1170,7 +1184,10 @@
             }
         });
 
-        chatOutputArea.innerHTML = ''; // Clear chat area for results
+        while (chatOutputArea.firstChild) { // Robust clearing
+            chatOutputArea.removeChild(chatOutputArea.firstChild);
+        }
+        chatOutputArea.scrollTop = 0; // Reset scroll
 
         currentQuizQuestions.forEach((mcq, qIndex) => {
             const questionDiv = document.createElement('div');
@@ -1211,22 +1228,25 @@
 
     // --- Chat Logic ---
     function displayChatMessage(sender, message) {
-        console.log(`DEBUG: displayChatMessage called. Sender: ${sender}, Message (first 100 chars): ${message.substring(0, Math.min(message.length, 100))}`); // New debug line
+        console.log(`DEBUG: displayChatMessage called. Sender: ${sender}, Message (first 100 chars): ${message.substring(0, Math.min(message.length, 100))}`);
+        console.log("DEBUG: chatOutputArea element:", chatOutputArea);
         const messageBubble = document.createElement('div');
         messageBubble.classList.add('chat-message-bubble', sender); // 'user' or 'ai'
 
         const span = document.createElement('span');
         span.textContent = message;
         messageBubble.appendChild(span);
+        console.log("DEBUG: messageBubble content before append to chatOutputArea:", messageBubble.innerHTML);
 
         chatOutputArea.appendChild(messageBubble);
         chatOutputArea.scrollTop = chatOutputArea.scrollHeight; // Auto-scroll to bottom
-        console.log("DEBUG: chatOutputArea content after append (first 200 chars):", chatOutputArea.innerHTML.substring(0, Math.min(chatOutputArea.innerHTML.length, 200))); // New debug line
+        console.log("DEBUG: chatOutputArea content after append (first 200 chars):", chatOutputArea.innerHTML.substring(0, Math.min(chatOutputArea.innerHTML.length, 200)));
     }
 
     async function handleSendChat() {
         const userMessage = chatInput.value.trim();
         if (!userMessage || !sessionId || isChatLoading) {
+            console.log("DEBUG: Chat not sent. User message empty, no session, or already loading.");
             return; // Don't send empty messages, or if no session, or if already loading
         }
 
@@ -1238,6 +1258,8 @@
         chatInput.disabled = true;
         sendChatBtn.disabled = true;
         chatLoadingAnimation.classList.add('visible');
+        console.log("DEBUG: Sending chat message with sessionId:", sessionId, "and query:", userMessage);
+        console.log("DEBUG: Calling chatWebhookUrl:", chatWebhookUrl);
 
         try {
             const response = await fetch(chatWebhookUrl, {
@@ -1248,21 +1270,25 @@
                 body: JSON.stringify({
                     sessionId: sessionId,
                     query: userMessage,
-                    filename: fileNameDisplay.innerText.replace('FILE SELECTED: ', '').replace('URL SELECTED: ', '').replace('NO FILE SELECTED.', '').replace('NO URL SELECTED.', '') // Pass filename for n8n to retrieve context
+                    // Pass filename for n8n to retrieve context (if needed by n8n)
+                    filename: fileNameDisplay.innerText.replace('FILE SELECTED: ', '').replace('URL SELECTED: ', '').replace('NO FILE SELECTED.', '').replace('NO URL SELECTED.', '') 
                 }),
             });
 
             if (!response.ok) {
                 const errorData = await response.json().catch(() => ({ message: 'Unknown error' }));
+                console.error("DEBUG: Chat webhook response not OK. Status:", response.status, "Error Data:", errorData);
                 throw new Error(`HTTP error! Status: ${response.status}, Message: ${errorData.message || JSON.stringify(errorData)}`);
             }
 
             const data = await response.json();
+            console.log("DEBUG: Raw chat response from webhook:", data); // THIS IS THE CRUCIAL LOG
             const aiResponse = data.response || "I couldn't get a clear answer. Please try rephrasing your question.";
+            console.log("DEBUG: AI Response content:", aiResponse);
             displayChatMessage('ai', aiResponse);
 
         } catch (error) {
-            console.error("Error sending chat message:", error);
+            console.error("ERROR: Error sending chat message:", error);
             chatErrorMessage.textContent = `Error: ${error.message}. Please try again.`;
             chatErrorMessage.classList.add('visible');
             displayChatMessage('ai', `Sorry, I encountered an error: "${error.message}". Please try again.`);
@@ -1289,6 +1315,7 @@
         updateButtonState();
         // Display initial message in the chat area
         displayChatMessage('ai', "SELECT AN ACTION AND UPLOAD A DOCUMENT TO GET STARTED.");
+        displayChatMessage('ai', "If you see this, the display is working!"); // Crucial test message
     });
 
 </script>
