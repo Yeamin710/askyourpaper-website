@@ -1034,9 +1034,26 @@
 
         try {
             const response = await fetch(initialGenerationWebhookUrl, fetchOptions);
-            const data = await response.json();
+            let rawData = await response.json(); // Get the raw response
 
-            console.log("Backend Response Data:", data); // Log the full response for debugging
+            console.log("Backend Raw Response Data:", rawData); // Log the full raw response for debugging
+
+            // IMPORTANT: Adjust to handle the array wrapper and capitalized keys from n8n
+            let data = {};
+            if (Array.isArray(rawData) && rawData.length > 0) {
+                data = rawData[0]; // Get the first object from the array
+                // Map capitalized keys to expected frontend camelCase/lowercase
+                data.sessionId = data["Session ID"];
+                data.filename = data["Filename"];
+                data.summary = data["Summary"];
+                data.highlights = data["Highlights"];
+                data.mcqs = data["MCQs"];
+            } else {
+                // If it's not an array, assume it's already the direct object (less common now)
+                data = rawData;
+            }
+
+            console.log("Frontend Processed Data:", data); // Log the processed data
 
             loadingIndicator.classList.remove('visible');
             generateBtn.disabled = false;
@@ -1046,7 +1063,7 @@
             urlInput.disabled = false;
 
             if (response.ok) {
-                sessionId = data.sessionId; // Store the session ID from n8n response
+                sessionId = data.sessionId; // Store the session ID
                 console.log("Session ID received:", sessionId);
 
                 // Clear "Generating..." message before displaying actual content
@@ -1054,7 +1071,7 @@
 
                 if (currentMode === 'summarize') {
                     displayChatMessage('ai', `SUMMARY:\n${data.summary || 'No summary generated.'}`);
-                } else if (currentMode === 'highlight') { // Corrected from 'highlights' to 'highlight'
+                } else if (currentMode === 'highlight') {
                     displayChatMessage('ai', `HIGHLIGHTS:\n${data.highlights || 'No highlights generated.'}`);
                 } else if (currentMode === 'mcq') {
                     currentQuizQuestions = data.mcqs || [];
