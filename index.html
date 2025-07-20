@@ -268,7 +268,8 @@
             transform: translateY(0);
             box-shadow: none;
         }
-        .output-container {
+        /* Styles for chat output area, now acting as main output */
+        .chat-output-area {
             min-height: 200px;
             background-color: rgba(255, 255, 255, 0.03);
             border: 1px solid var(--border-color);
@@ -281,12 +282,11 @@
             overflow-y: auto;
             scroll-behavior: smooth;
             font-size: 0.95rem;
+            margin-bottom: 25px; /* Added margin */
+            display: flex; /* For chat bubble alignment */
+            flex-direction: column; /* Stack messages vertically */
         }
-        #initial-response-output { /* Renamed from response-output for clarity */
-            font-size: 16px;
-            word-wrap: break-word;
-            white-space: pre-wrap;
-        }
+
         .loading-animation {
             display: flex;
             justify-content: center;
@@ -534,6 +534,32 @@
             transform: translateY(-2px);
         }
 
+        /* Chat message bubble styles */
+        .chat-message-bubble {
+            padding: 10px 15px;
+            border-radius: 15px;
+            margin-bottom: 10px;
+            max-width: 80%;
+            word-wrap: break-word;
+            line-height: 1.4;
+        }
+
+        .chat-message-bubble.user {
+            background-color: var(--chat-user-bg);
+            color: var(--chat-user-text);
+            align-self: flex-end; /* Align user messages to the right */
+            margin-left: auto; /* Push to right */
+            border-bottom-right-radius: 2px; /* Small corner for chat bubble tail */
+        }
+
+        .chat-message-bubble.ai {
+            background-color: var(--chat-ai-bg);
+            color: var(--chat-ai-text);
+            align-self: flex-start; /* Align AI messages to the left */
+            margin-right: auto; /* Push to left */
+            border-bottom-left-radius: 2px; /* Small corner for chat bubble tail */
+        }
+
         /* --- Mobile Responsiveness --- */
         @media (max-width: 768px) {
             body {
@@ -615,7 +641,7 @@
                 font-size: 1rem;
             }
 
-            .output-container {
+            .chat-output-area { /* Updated from .output-container */
                 height: 300px;
                 padding: 15px;
                 font-size: 0.9rem;
@@ -699,7 +725,7 @@
                 font-size: 0.85rem;
             }
 
-            .output-container {
+            .chat-output-area { /* Updated from .output-container */
                 height: 250px;
                 padding: 12px;
                 font-size: 0.8rem;
@@ -733,7 +759,7 @@
         </div>
         <div class="action-buttons-column">
             <span class="action-hint-arrow"></span>
-            <button class="action-button" data-mode="highlight">Extract Highlights</button>
+            <button class="action-button" data-mode="highlights">Extract Highlights</button>
         </div>
         <div class="action-buttons-column">
             <span class="action-hint-arrow"></span>
@@ -780,19 +806,15 @@
         </div>
     </div>
 
-    <div id="output-and-chat" class="output-container">
-        <p id="initial-response-output" class="chat-message"><span class="sender">ASSISTANT</span><span class="content">SELECT AN ACTION AND UPLOAD A DOCUMENT TO GET STARTED.</span></p>
-    </div>
-
     <div id="mcq-submit-group" class="button-group" style="display: none;">
         <button id="submit-mcq-btn">SUBMIT QUIZ</button>
     </div>
 
-    <!-- Chat Section - Initially Hidden -->
-    <div id="chat-section" class="chat-section hidden">
+    <!-- Chat Section - Now always visible and acts as primary output -->
+    <div id="chat-section" class="chat-section">
         <h2 class="chat-header">Chat with Document</h2>
         <div class="chat-output-area" id="chat-output-area">
-            <!-- Chat messages will be dynamically inserted here -->
+            <!-- Chat messages and generated content will be dynamically inserted here -->
         </div>
         <div class="chat-input-container">
             <input type="text" id="chat-input" class="chat-input" placeholder="ASK A QUESTION ABOUT THE DOCUMENT..." disabled>
@@ -821,8 +843,7 @@
     const generateBtn = document.getElementById('generate-btn');
     const loadingIndicator = document.getElementById('loading-indicator');
     const actionInstruction = document.getElementById('action-instruction');
-    const outputAndChat = document.getElementById('output-and-chat');
-    const initialResponseOutput = document.getElementById('initial-response-output');
+    const chatOutputArea = document.getElementById('chat-output-area'); // Renamed from outputAndChat
     const mcqOptionsContainer = document.getElementById('mcq-options');
     const difficultyButtons = document.querySelectorAll('.difficulty-button');
     
@@ -837,9 +858,8 @@
 
     // NEW: Chat specific elements
     const chatSection = document.getElementById('chat-section');
-    const chatOutputArea = document.getElementById('chat-output-area');
     const chatInput = document.getElementById('chat-input');
-    const sendChatBtn = document.getElementById('send-chat-btn'); // Renamed from sendBtn to avoid conflict
+    const sendChatBtn = document.getElementById('send-chat-btn'); 
     const chatLoadingAnimation = document.getElementById('chat-loading-animation');
     const chatErrorMessage = document.getElementById('chat-error-message');
 
@@ -878,10 +898,8 @@
             currentMode = button.getAttribute('data-mode');
             actionInstruction.classList.add('hidden');
             
-            // Hide submit button and chat input when changing mode
+            // Hide submit button when changing mode
             mcqSubmitGroup.style.display = 'none';
-            chatSection.classList.add('hidden'); // Hide chat section
-            initialResponseOutput.style.display = 'block'; // Show initial message again
 
             if (currentMode === 'mcq') {
                 mcqOptionsContainer.classList.add('visible');
@@ -930,11 +948,11 @@
             selectedUrl = null;
             urlInput.value = '';
             fileNameDisplay.innerText = `FILE SELECTED: ${file.name}`;
-            updateInitialResponse("FILE UPLOADED. SELECT AN ACTION AND CLICK 'GENERATE'.");
+            displayChatMessage('ai', "FILE UPLOADED. SELECT AN ACTION AND CLICK 'GENERATE'.");
         } else {
             selectedFile = null;
             fileNameDisplay.innerText = "NO FILE SELECTED.";
-            updateInitialResponse("SELECT AN ACTION AND UPLOAD A DOCUMENT TO GET STARTED.");
+            displayChatMessage('ai', "SELECT AN ACTION AND UPLOAD A DOCUMENT TO GET STARTED.");
         }
         updateButtonState();
     });
@@ -946,27 +964,29 @@
             selectedFile = null;
             fileInput.value = '';
             fileNameDisplay.innerText = `URL SELECTED: ${url.substring(0, 50)}...`;
-            updateInitialResponse("URL UPLOADED. SELECT AN ACTION AND CLICK 'GENERATE'.");
+            displayChatMessage('ai', "URL UPLOADED. SELECT AN ACTION AND CLICK 'GENERATE'.");
         } else {
             selectedUrl = null;
             fileNameDisplay.innerText = "NO URL SELECTED.";
-            updateInitialResponse("SELECT AN ACTION AND UPLOAD A DOCUMENT TO GET STARTED.");
+            displayChatMessage('ai', "SELECT AN ACTION AND UPLOAD A DOCUMENT TO GET STARTED.");
         }
         updateButtonState();
     });
 
+    // Helper to display initial messages in the chat area
     const updateInitialResponse = (message) => {
-        initialResponseOutput.querySelector('.content').innerText = message;
+        displayChatMessage('ai', message);
     };
 
     generateBtn.addEventListener('click', async () => {
         if (!selectedFile && !selectedUrl || currentMode === null) {
-            updateInitialResponse("PLEASE UPLOAD A FILE OR PROVIDE A URL AND SELECT AN ACTION.");
+            displayChatMessage('ai', "PLEASE UPLOAD A FILE OR PROVIDE A URL AND SELECT AN ACTION.");
             return;
         }
 
-        // Reset output area and hide chat/MCQ elements
-        outputAndChat.innerHTML = '<p id="initial-response-output" class="chat-message"><span class="sender">ASSISTANT</span><span class="content">Generating...</span></p>';
+        // Clear chat area and display "Generating..." message
+        chatOutputArea.innerHTML = ''; 
+        displayChatMessage('ai', "Generating..."); 
         loadingIndicator.classList.add('visible');
         generateBtn.disabled = true;
         actionButtons.forEach(btn => btn.disabled = true);
@@ -975,7 +995,6 @@
         urlInput.disabled = true;
         mcqOptionsContainer.classList.remove('visible');
         mcqSubmitGroup.style.display = 'none';
-        chatSection.classList.add('hidden'); // Ensure chat section is hidden on new generation
 
         let formData = new FormData();
         let originalFilename = '';
@@ -991,12 +1010,12 @@
             formData.append('file', selectedFile);
             originalFilename = selectedFile.name;
         } else if (selectedUrl) {
-            requestBody.url = selectedUrl; // Changed from pdf_url to url for n8n webhook consistency
+            requestBody.url = selectedUrl; 
             originalFilename = selectedUrl.substring(selectedUrl.lastIndexOf('/') + 1) || 'url_document.pdf';
         }
 
-        requestBody.mode = currentMode; // Changed from original_mode to mode for n8n webhook consistency
-        requestBody.filename = originalFilename; // Changed from original_filename to filename for n8n webhook consistency
+        requestBody.mode = currentMode; 
+        requestBody.filename = originalFilename; 
         if (currentMode === 'mcq') {
             requestBody.difficulty = selectedDifficulty;
         }
@@ -1034,21 +1053,20 @@
                 console.log("Session ID received:", sessionId);
 
                 if (currentMode === 'summarize') {
-                    outputAndChat.innerHTML = `<p class="chat-message"><span class="sender">ASSISTANT (SUMMARY)</span><span class="content">${data.summary || 'No summary generated.'}</span></p>`;
+                    displayChatMessage('ai', `SUMMARY:\n${data.summary || 'No summary generated.'}`);
                 } else if (currentMode === 'highlights') {
-                    outputAndChat.innerHTML = `<p class="chat-message"><span class="sender">ASSISTANT (HIGHLIGHTS)</span><span class="content">${data.highlights || 'No highlights generated.'}</span></p>`;
+                    displayChatMessage('ai', `HIGHLIGHTS:\n${data.highlights || 'No highlights generated.'}`);
                 } else if (currentMode === 'mcq') {
                     currentQuizQuestions = data.mcqs || [];
                     if (currentQuizQuestions.length > 0) {
-                        displayMCQQuiz(currentQuizQuestions);
+                        displayMCQQuiz(currentQuizQuestions); 
                         mcqSubmitGroup.style.display = 'flex'; // Show submit button
                     } else {
-                        outputAndChat.innerHTML = `<p class="chat-message"><span class="sender">ASSISTANT (MCQ)</span><span class="content">No MCQs generated.</span></p>`;
+                        displayChatMessage('ai', "No MCQs generated.");
                     }
                 }
                 
-                // After successful generation, enable and show the chat section
-                chatSection.classList.remove('hidden');
+                // After successful generation, enable chat input
                 chatInput.disabled = false;
                 sendChatBtn.disabled = false;
                 chatInput.focus(); // Focus on the chat input for immediate use
@@ -1056,10 +1074,9 @@
 
 
             } else {
-                updateInitialResponse(`ERROR: ${data.error || 'Something went wrong.'}`);
+                displayChatMessage('ai', `ERROR: ${data.error || 'Something went wrong.'}`);
                 console.error('Backend Error:', data.error);
                 // Keep chat disabled on error
-                chatSection.classList.add('hidden');
                 chatInput.disabled = true;
                 sendChatBtn.disabled = true;
             }
@@ -1070,10 +1087,9 @@
             urlUploadBtn.disabled = false;
             fileInput.disabled = false;
             urlInput.disabled = false;
-            updateInitialResponse(`NETWORK ERROR: ${error.message}. PLEASE CHECK YOUR CONNECTION OR BACKEND URL.`);
+            displayChatMessage('ai', `NETWORK ERROR: ${error.message}. PLEASE CHECK YOUR CONNECTION OR BACKEND URL.`);
             console.error('Network or Fetch Error:', error);
             // Keep chat disabled on error
-            chatSection.classList.add('hidden');
             chatInput.disabled = true;
             sendChatBtn.disabled = true;
         }
@@ -1081,7 +1097,9 @@
 
     // --- MCQ Quiz Logic ---
     function displayMCQQuiz(mcqs) {
-        outputAndChat.innerHTML = ''; // Clear previous output
+        chatOutputArea.innerHTML = ''; // Clear chat area for quiz
+        displayChatMessage('ai', "Here is your MCQ quiz:"); // Announce the quiz
+
         score = 0;
         totalQuestions = mcqs.length;
         userAnswers = {}; // Reset user answers
@@ -1104,8 +1122,9 @@
                 optionsDiv.appendChild(optionElement);
             });
             questionDiv.appendChild(optionsDiv);
-            outputAndChat.appendChild(questionDiv);
+            chatOutputArea.appendChild(questionDiv); // Append to chat area
         });
+        chatOutputArea.scrollTop = chatOutputArea.scrollHeight; // Auto-scroll to bottom
     }
 
     function handleOptionSelect(event) {
@@ -1123,7 +1142,7 @@
 
     submitMcqBtn.addEventListener('click', () => {
         score = 0;
-        outputAndChat.innerHTML = ''; // Clear quiz display
+        chatOutputArea.innerHTML = ''; // Clear chat area for results
 
         currentQuizQuestions.forEach((mcq, qIndex) => {
             const questionDiv = document.createElement('div');
@@ -1151,21 +1170,14 @@
                 optionsDiv.appendChild(optionElement);
             });
             questionDiv.appendChild(optionsDiv);
-            outputAndChat.appendChild(questionDiv);
-
-            // Calculate score
-            const selectedAnswerForQuestion = userAnswers[qIndex];
-            // Find the full text of the correct option based on the correct_answer letter
-            const correctOptionText = mcq.options.find(opt => opt.startsWith(mcq.correct_answer + ")"));
-            if (selectedAnswerForQuestion === correctOptionText) {
-                score++;
-            }
+            chatOutputArea.appendChild(questionDiv); // Append to chat area
         });
 
         const resultsDiv = document.createElement('div');
         resultsDiv.id = 'mcq-results';
         resultsDiv.textContent = `YOUR SCORE: ${score} / ${totalQuestions}`;
-        outputAndChat.appendChild(resultsDiv);
+        chatOutputArea.appendChild(resultsDiv); // Append to chat area
+        chatOutputArea.scrollTop = chatOutputArea.scrollHeight; // Auto-scroll to bottom
 
         mcqSubmitGroup.style.display = 'none'; // Hide submit button after submission
     });
@@ -1246,8 +1258,8 @@
     // Initial state setup
     document.addEventListener('DOMContentLoaded', () => {
         updateButtonState();
-        // Ensure initial-response-output content is correctly set at start
-        initialResponseOutput.innerHTML = '<p class="chat-message"><span class="sender">ASSISTANT</span><span class="content">SELECT AN ACTION AND UPLOAD A DOCUMENT TO GET STARTED.</span></p>';
+        // Display initial message in the chat area
+        displayChatMessage('ai', "SELECT AN ACTION AND UPLOAD A DOCUMENT TO GET STARTED.");
     });
 
 </script>
