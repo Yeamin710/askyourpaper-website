@@ -327,14 +327,11 @@
         }
         /* New styles for chat input */
         .chat-input-group {
-            display: none; /* Hidden by default */
+            display: flex; /* Changed to flex to always show, but disabled */
             gap: 10px;
             margin-top: 25px;
             transition: opacity 0.5s ease;
             flex-direction: row;
-        }
-        .chat-input-group.visible {
-            display: flex;
         }
         .chat-input {
             flex-grow: 1;
@@ -364,7 +361,7 @@
             transition: all 0.3s ease;
             text-transform: uppercase;
         }
-        #send-btn:hover {
+        #send-btn:hover:not(:disabled) { /* Added not(:disabled) */
             transform: translateY(-2px);
             background-color: var(--button-hover-bg);
         }
@@ -816,7 +813,7 @@
         <div class="chat-output-area" id="chat-output-area">
             <!-- Chat messages and generated content will be dynamically inserted here -->
         </div>
-        <div class="chat-input-container">
+        <div class="chat-input-container chat-input-group"> <!-- Added chat-input-group class for styling -->
             <input type="text" id="chat-input" class="chat-input" placeholder="ASK A QUESTION ABOUT THE DOCUMENT..." disabled>
             <button id="send-chat-btn" disabled>SEND</button>
         </div>
@@ -843,7 +840,7 @@
     const generateBtn = document.getElementById('generate-btn');
     const loadingIndicator = document.getElementById('loading-indicator');
     const actionInstruction = document.getElementById('action-instruction');
-    const chatOutputArea = document.getElementById('chat-output-area'); // Renamed from outputAndChat
+    const chatOutputArea = document.getElementById('chat-output-area');
     const mcqOptionsContainer = document.getElementById('mcq-options');
     const difficultyButtons = document.querySelectorAll('.difficulty-button');
     
@@ -973,11 +970,6 @@
         updateButtonState();
     });
 
-    // Helper to display initial messages in the chat area
-    const updateInitialResponse = (message) => {
-        displayChatMessage('ai', message);
-    };
-
     generateBtn.addEventListener('click', async () => {
         if (!selectedFile && !selectedUrl || currentMode === null) {
             displayChatMessage('ai', "PLEASE UPLOAD A FILE OR PROVIDE A URL AND SELECT AN ACTION.");
@@ -995,6 +987,9 @@
         urlInput.disabled = true;
         mcqOptionsContainer.classList.remove('visible');
         mcqSubmitGroup.style.display = 'none';
+        chatInput.disabled = true; // Disable chat input during generation
+        sendChatBtn.disabled = true; // Disable send button during generation
+
 
         let formData = new FormData();
         let originalFilename = '';
@@ -1041,6 +1036,8 @@
             const response = await fetch(initialGenerationWebhookUrl, fetchOptions);
             const data = await response.json();
 
+            console.log("Backend Response Data:", data); // Log the full response for debugging
+
             loadingIndicator.classList.remove('visible');
             generateBtn.disabled = false;
             actionButtons.forEach(btn => btn.disabled = false);
@@ -1052,9 +1049,12 @@
                 sessionId = data.sessionId; // Store the session ID from n8n response
                 console.log("Session ID received:", sessionId);
 
+                // Clear "Generating..." message before displaying actual content
+                chatOutputArea.innerHTML = ''; 
+
                 if (currentMode === 'summarize') {
                     displayChatMessage('ai', `SUMMARY:\n${data.summary || 'No summary generated.'}`);
-                } else if (currentMode === 'highlights') {
+                } else if (currentMode === 'highlight') { // Corrected from 'highlights' to 'highlight'
                     displayChatMessage('ai', `HIGHLIGHTS:\n${data.highlights || 'No highlights generated.'}`);
                 } else if (currentMode === 'mcq') {
                     currentQuizQuestions = data.mcqs || [];
@@ -1107,6 +1107,7 @@
         mcqs.forEach((mcq, qIndex) => {
             const questionDiv = document.createElement('div');
             questionDiv.classList.add('mcq-question');
+            questionDiv.dataset.qIndex = qIndex; // Add data-q-index to questionDiv
             questionDiv.innerHTML = `<div class="mcq-question-text">Q${qIndex + 1}: ${mcq.question}</div>`;
 
             const optionsDiv = document.createElement('div');
@@ -1132,8 +1133,11 @@
         const qIndex = selectedOption.dataset.qIndex;
 
         // Remove 'selected' class from other options for this question
-        const optionsForThisQuestion = document.querySelectorAll(`.mcq-question[data-q-index="${qIndex}"] .mcq-option`);
-        optionsForThisQuestion.forEach(opt => opt.classList.remove('selected'));
+        const questionContainer = document.querySelector(`.mcq-question[data-q-index="${qIndex}"]`);
+        if (questionContainer) {
+            const optionsForThisQuestion = questionContainer.querySelectorAll('.mcq-option');
+            optionsForThisQuestion.forEach(opt => opt.classList.remove('selected'));
+        }
 
         // Add 'selected' class to the clicked option
         selectedOption.classList.add('selected');
@@ -1142,6 +1146,13 @@
 
     submitMcqBtn.addEventListener('click', () => {
         score = 0;
+        // Recalculate score based on userAnswers and currentQuizQuestions
+        currentQuizQuestions.forEach((mcq, qIndex) => {
+            if (userAnswers[qIndex] && userAnswers[qIndex].startsWith(mcq.correct_answer + ")")) {
+                score++;
+            }
+        });
+
         chatOutputArea.innerHTML = ''; // Clear chat area for results
 
         currentQuizQuestions.forEach((mcq, qIndex) => {
@@ -1157,7 +1168,6 @@
                 optionElement.classList.add('mcq-option', 'disabled'); // Disable after submission
                 optionElement.textContent = optionText;
 
-                // Check if the option text starts with the correct answer prefix (e.g., "A)")
                 const isCorrect = optionText.startsWith(mcq.correct_answer + ")");
                 const isUserSelected = userAnswers[qIndex] === optionText;
 
