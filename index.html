@@ -1,7 +1,836 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Askyourpaper</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;800&family=Roboto+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #000000;
+            --container-bg: rgba(255, 255, 255, 0.03);
+            --text-color: #CCCCCC;
+            --main-text-color: #FFFFFF;
+            --border-color: #333333;
+            --button-border: #666666;
+            --button-hover-bg: #222222;
+            --shadow-color: rgba(0, 0, 0, 0.5);
+            --disabled-color: #555555;
+            --loading-color: #888888;
+            --active-bg: #FFFFFF;
+            --active-text: #000000;
+            --active-glow: 0 0 20px rgba(255, 255, 255, 0.8), inset 0 0 10px rgba(255, 255, 255, 0.4);
+            --hint-color: #888888;
+            --chat-user-bg: #007bff; /* Blue for user messages */
+            --chat-user-text: #FFFFFF;
+            --chat-ai-bg: #333333; /* Darker for AI messages */
+            --chat-ai-text: #FFFFFF;
+            --chat-border: #444444;
+        }
+        body {
+            font-family: 'Roboto Mono', monospace;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+        }
+        .app-container {
+            width: 100%;
+            max-width: 900px;
+            padding: 40px;
+            background-color: var(--container-bg);
+            backdrop-filter: blur(10px);
+            border-radius: 16px;
+            border: 1px solid var(--border-color);
+            box-shadow: 0 12px 30px var(--shadow-color);
+            display: flex;
+            flex-direction: column;
+            gap: 25px;
+            animation: fadeIn 0.8s ease-out;
+        }
+        .logo-container {
+            text-align: center;
+        }
+        h1 {
+            color: var(--main-text-color);
+            font-weight: 800;
+            letter-spacing: -1px;
+            font-size: 2.5rem;
+            margin: 0;
+            text-align: center;
+        }
+        .action-instruction-group {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+            transition: opacity 0.3s ease;
+            margin-bottom: 25px;
+        }
+        .action-instruction-group.hidden {
+            opacity: 0;
+            height: 0;
+            overflow: hidden;
+            pointer-events: none;
+            margin-bottom: 0;
+        }
+        .action-instruction-text {
+            color: var(--hint-color);
+            font-weight: 600;
+            font-size: 1.1rem;
+            text-align: center;
+            text-transform: uppercase;
+        }
+        .action-buttons-container {
+            display: flex;
+            justify-content: space-around;
+            align-items: flex-end;
+            gap: 15px;
+            margin-top: -15px;
+            flex-wrap: wrap;
+        }
+        .action-buttons-column {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            flex: 1 1 auto;
+            min-width: 120px;
+        }
+        .action-hint-arrow {
+            color: var(--hint-color);
+            font-size: 24px;
+            line-height: 1;
+            margin-bottom: 5px;
+            animation: blink 3s infinite;
+        }
+        .action-buttons-column:nth-child(2) .action-hint-arrow {
+            animation-delay: 1s;
+        }
+        .action-buttons-column:nth-child(3) .action-hint-arrow {
+            animation-delay: 2s;
+        }
+        .action-button {
+            padding: 15px 25px;
+            border: 1px solid var(--button-border);
+            border-radius: 12px;
+            font-size: 1rem;
+            font-weight: 600;
+            background-color: transparent;
+            color: var(--main-text-color);
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+            text-transform: uppercase;
+            width: 100%;
+            box-sizing: border-box;
+        }
+        .action-button:hover:not(:disabled) {
+            background-color: var(--button-hover-bg);
+            transform: translateY(-2px);
+        }
+        .action-button.active {
+            background-color: var(--active-bg);
+            color: var(--active-text);
+            border-color: var(--active-bg);
+            box-shadow: var(--active-glow);
+            transform: translateY(-2px);
+            animation: pulse-glow 2s infinite ease-in-out;
+        }
+        .action-button.active:hover {
+            background-color: var(--active-bg);
+            color: var(--active-text);
+            border-color: var(--active-bg);
+            box-shadow: var(--active-glow);
+            transform: translateY(-2px);
+        }
+        .action-button:disabled {
+            background-color: transparent;
+            color: var(--disabled-color);
+            border-color: var(--disabled-color);
+            cursor: not-allowed;
+            transform: translateY(0);
+            box-shadow: none;
+        }
+        .file-upload-box {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            border: 2px dashed var(--button-border);
+            border-radius: 12px;
+            background-color: rgba(255, 255, 255, 0.05);
+            padding: 40px 20px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-align: center;
+        }
+        .file-upload-box:hover {
+            background-color: rgba(255, 255, 255, 0.1);
+            transform: translateY(-3px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+        }
+        .upload-icon {
+            font-size: 40px;
+            color: var(--main-text-color);
+            transition: transform 0.3s ease;
+        }
+        .file-upload-box:hover .upload-icon {
+            transform: scale(1.1);
+        }
+        .upload-text {
+            margin-top: 10px;
+            color: var(--main-text-color);
+            font-weight: 600;
+            text-transform: uppercase;
+            font-size: 0.9rem;
+        }
+        .file-name {
+            margin-top: 10px;
+            color: var(--text-color);
+            font-style: italic;
+            font-weight: 400;
+            text-transform: uppercase;
+            font-size: 0.8rem;
+            text-align: center;
+            word-break: break-all;
+        }
+        input[type="file"] {
+            display: none;
+        }
+        .url-upload-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+            width: 100%;
+            box-sizing: border-box;
+        }
+        .url-input-group {
+            display: flex;
+            gap: 10px;
+            width: 100%;
+            flex-direction: row;
+        }
+        .url-input {
+            flex-grow: 1;
+            padding: 12px 18px;
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            background-color: rgba(255, 255, 255, 0.05);
+            color: var(--main-text-color);
+            font-size: 1rem;
+        }
+        .url-input::placeholder {
+            color: var(--disabled-color);
+        }
+        .url-input:focus {
+            outline: none;
+            border-color: var(--active-bg);
+        }
+        .button-group {
+            display: flex;
+            gap: 15px;
+            justify-content: flex-end;
+            align-items: center;
+            margin-top: 15px;
+            margin-bottom: 25px;
+            flex-wrap: wrap-reverse;
+            justify-content: center;
+        }
+        #generate-btn {
+            padding: 15px 30px;
+            border: 1px solid var(--button-border);
+            border-radius: 12px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            background-color: transparent;
+            color: var(--main-text-color);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+            text-transform: uppercase;
+            flex-grow: 1;
+            max-width: 250px;
+        }
+        #generate-btn:hover:not(:disabled) {
+            transform: translateY(-3px);
+            background-color: var(--button-hover-bg);
+        }
+        #generate-btn:disabled {
+            background-color: transparent;
+            color: var(--disabled-color);
+            border-color: var(--disabled-color);
+            cursor: not-allowed;
+            transform: translateY(0);
+            box-shadow: none;
+        }
+        /* Styles for chat output area, now acting as main output */
+        .chat-output-area {
+            min-height: 200px;
+            background-color: rgba(255, 255, 255, 0.03);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 20px;
+            line-height: 1.6;
+            box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.1);
+            color: var(--main-text-color);
+            height: 400px;
+            overflow-y: auto;
+            scroll-behavior: smooth;
+            font-size: 0.95rem;
+            margin-bottom: 25px; /* Added margin */
+            display: flex; /* For chat bubble alignment */
+            flex-direction: column; /* Stack messages vertically */
+        }
+
+        .loading-animation {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 8px;
+            display: none;
+            margin-top: 20px;
+        }
+        .loading-animation.visible {
+            display: flex;
+        }
+        .dot {
+            width: 10px;
+            height: 10px;
+            background-color: var(--loading-color);
+            border-radius: 50%;
+            animation: bounce 1.4s infinite ease-in-out both;
+        }
+        .dot:nth-child(1) { animation-delay: -0.32s; }
+        .dot:nth-child(2) { animation-delay: -0.16s; }
+        .dot:nth-child(3) { animation-delay: 0s; }
+        @keyframes bounce {
+            0%, 80%, 100% { transform: scale(0); }
+            40% { transform: scale(1.0); }
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes blink {
+            0%, 100% { opacity: 0; }
+            50% { opacity: 1; }
+        }
+        @keyframes pulse-glow {
+            0% { box-shadow: 0 0 20px rgba(255, 255, 255, 0.8), inset 0 0 10px rgba(255, 255, 255, 0.4); }
+            50% { box-shadow: 0 0 30px rgba(255, 255, 255, 1), inset 0 0 15px rgba(255, 255, 255, 0.6); }
+            100% { box-shadow: 0 0 20px rgba(255, 255, 255, 0.8), inset 0 0 10px rgba(255, 255, 255, 0.4); }
+        }
+        /* New styles for chat input */
+        .chat-input-group {
+            display: flex; /* Changed to flex to always show, but disabled */
+            gap: 10px;
+            margin-top: 25px;
+            transition: opacity 0.5s ease;
+            flex-direction: row;
+        }
+        .chat-input {
+            flex-grow: 1;
+            padding: 12px 18px;
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            background-color: rgba(255, 255, 255, 0.05);
+            color: var(--main-text-color);
+            font-size: 1rem;
+        }
+        .chat-input::placeholder {
+            color: var(--disabled-color);
+        }
+        .chat-input:focus {
+            outline: none;
+            border-color: var(--active-bg);
+        }
+        #send-btn {
+            padding: 12px 20px;
+            border: 1px solid var(--button-border);
+            border-radius: 12px;
+            font-size: 1rem;
+            font-weight: 600;
+            background-color: transparent;
+            color: var(--main-text-color);
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+        }
+        #send-btn:hover:not(:disabled) { /* Added not(:disabled) */
+            transform: translateY(-2px);
+            background-color: var(--button-hover-bg);
+        }
+        #send-btn:disabled {
+            background-color: transparent;
+            color: var(--disabled-color);
+            border-color: var(--disabled-color);
+            cursor: not-allowed;
+            transform: translateY(0);
+            box-shadow: none;
+        }
+        /* MCQ Difficulty Options */
+        .mcq-options-container {
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+            margin-top: 20px;
+        }
+        .mcq-options-container.visible {
+            display: flex;
+        }
+        .difficulty-buttons {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+        .difficulty-button {
+            padding: 10px 20px;
+            border: 1px solid var(--button-border);
+            border-radius: 8px;
+            background-color: transparent;
+            color: var(--main-text-color);
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-transform: uppercase;
+            font-size: 0.8rem;
+            flex: 1 1 auto;
+            min-width: 80px;
+            box-sizing: border-box;
+        }
+        .difficulty-button:hover {
+            background-color: var(--button-hover-bg);
+        }
+        .difficulty-button.active {
+            background-color: var(--active-bg);
+            color: var(--active-text);
+            border-color: var(--active-bg);
+            box-shadow: var(--active-glow);
+            animation: pulse-glow 2s infinite ease-in-out;
+        }
+        .difficulty-button.active:hover {
+            background-color: var(--active-bg);
+            color: var(--active-text);
+            border-color: var(--active-bg);
+            box-shadow: var(--active-glow);
+            animation: pulse-glow 2s infinite ease-in-out;
+        }
+        /* New styles for interactive MCQ test */
+        .mcq-question {
+            margin-bottom: 25px;
+        }
+        .mcq-question-text {
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin-bottom: 15px;
+            text-transform: uppercase;
+        }
+        .mcq-options {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .mcq-option {
+            padding: 12px 15px;
+            background-color: rgba(255, 255, 255, 0.05);
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background-color 0.2s ease, border-color 0.2s ease;
+            border: 1px solid transparent; /* Default transparent border */
+            font-size: 0.95rem;
+            word-wrap: break-word;
+        }
+        .mcq-option:hover {
+            background-color: rgba(255, 255, 255, 0.1);
+        }
+        /* NEW: Style for selected option before submission */
+        .mcq-option.selected {
+            background-color: rgba(255, 255, 255, 0.2);
+            border-color: var(--active-bg); /* Use active color for selection indication */
+        }
+        .mcq-option.correct {
+            background-color: #28a745;
+            border-color: #28a745;
+        }
+        .mcq-option.incorrect {
+            background-color: #dc3545;
+            border-color: #dc3545;
+        }
+        .mcq-option.disabled {
+            cursor: not-allowed;
+            opacity: 0.6;
+        }
+        #mcq-results {
+            font-size: 1.2rem;
+            font-weight: 600;
+            text-align: center;
+            padding: 20px;
+            background-color: rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            margin-top: 20px;
+            text-transform: uppercase;
+        }
+        #local-upload-container, #url-upload-container {
+            display: none;
+            transition: opacity 0.5s ease-in-out;
+        }
+        #local-upload-container.active, #url-upload-container.active {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            opacity: 1;
+        }
+        #url-upload-container {
+            opacity: 0;
+            height: 0;
+            overflow: hidden;
+            transition: opacity 0.5s ease-in-out, height 0.5s ease-in-out;
+        }
+        #url-upload-container.active {
+            height: auto;
+            opacity: 1;
+            padding-top: 15px;
+        }
+        .go-back-btn {
+            margin-top: 15px;
+            font-size: 0.9rem;
+            text-decoration: underline;
+            color: var(--hint-color);
+            cursor: pointer;
+            transition: color 0.2s;
+        }
+        .go-back-btn:hover {
+            color: var(--main-text-color);
+        }
+        .upload-link-btn-container {
+            margin-top: 15px;
+            text-align: center;
+        }
+        #upload-link-btn {
+            padding: 12px 24px;
+            border: 1px solid var(--button-border);
+            border-radius: 12px;
+            font-size: 1rem;
+            font-weight: 600;
+            background-color: transparent;
+            color: var(--main-text-color);
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+            text-transform: uppercase;
+        }
+        #upload-link-btn:hover {
+            background-color: var(--button-hover-bg);
+            transform: translateY(-2px);
+        }
+
+        /* Chat message bubble styles */
+        .chat-message-bubble {
+            padding: 10px 15px;
+            border-radius: 15px;
+            margin-bottom: 10px;
+            max-width: 80%;
+            word-wrap: break-word;
+            line-height: 1.4;
+        }
+
+        .chat-message-bubble.user {
+            background-color: var(--chat-user-bg);
+            color: var(--chat-user-text);
+            align-self: flex-end; /* Align user messages to the right */
+            margin-left: auto; /* Push to right */
+            border-bottom-right-radius: 2px; /* Small corner for chat bubble tail */
+        }
+
+        .chat-message-bubble.ai {
+            background-color: var(--chat-ai-bg);
+            color: var(--chat-ai-text);
+            align-self: flex-start; /* Align AI messages to the left */
+            margin-right: auto; /* Push to left */
+            border-bottom-left-radius: 2px; /* Small corner for chat bubble tail */
+        }
+
+        /* --- Mobile Responsiveness --- */
+        @media (max-width: 768px) {
+            body {
+                padding: 10px;
+            }
+
+            .app-container {
+                padding: 20px;
+                gap: 15px;
+            }
+
+            h1 {
+                font-size: 2rem;
+            }
+
+            .action-instruction-text {
+                font-size: 0.95rem;
+            }
+
+            .action-buttons-container {
+                flex-direction: column;
+                align-items: stretch;
+                gap: 10px;
+                margin-top: 0;
+            }
+
+            .action-buttons-column {
+                min-width: unset;
+            }
+
+            .action-hint-arrow {
+                display: none;
+            }
+
+            .action-button {
+                padding: 12px 20px;
+                font-size: 0.9rem;
+            }
+
+            .file-upload-box {
+                padding: 30px 15px;
+            }
+
+            .upload-icon {
+                font-size: 30px;
+            }
+
+            .upload-text {
+                font-size: 0.8rem;
+            }
+
+            .file-name {
+                font-size: 0.75rem;
+            }
+
+            .url-input-group {
+                flex-direction: column;
+                gap: 10px;
+            }
+
+            #url-upload-btn {
+                width: 100%;
+                padding: 12px 20px;
+                font-size: 0.9rem;
+                box-sizing: border-box;
+            }
+
+            .button-group {
+                flex-direction: column-reverse;
+                align-items: center;
+                gap: 10px;
+                margin-bottom: 15px;
+            }
+
+            #generate-btn, #submit-mcq-btn { /* Added submit button here */
+                width: 100%;
+                max-width: none;
+                padding: 15px 25px;
+                font-size: 1rem;
+            }
+
+            .chat-output-area { /* Updated from .output-container */
+                height: 300px;
+                padding: 15px;
+                font-size: 0.9rem;
+            }
+            
+            .chat-input-group {
+                flex-direction: column;
+                gap: 10px;
+                margin-top: 15px;
+            }
+
+            .chat-input {
+                padding: 10px 15px;
+                font-size: 0.9rem;
+            }
+
+            #send-btn {
+                width: 100%;
+                padding: 10px 15px;
+                font-size: 0.9rem;
+            }
+
+            .mcq-question-text {
+                font-size: 1rem;
+            }
+
+            .mcq-option {
+                padding: 10px 12px;
+                font-size: 0.9rem;
+            }
+
+            #mcq-results {
+                font-size: 1.1rem;
+                padding: 15px;
+            }
+            
+            .difficulty-buttons {
+                flex-direction: column;
+                align-items: stretch;
+                gap: 8px;
+            }
+
+            .difficulty-button {
+                width: 100%;
+                min-width: unset;
+                padding: 10px 15px;
+                font-size: 0.85rem;
+            }
+        }
+
+        /* Even smaller screens (e.g., very small phones) */
+        @media (max-width: 480px) {
+            .app-container {
+                padding: 15px;
+                gap: 10px;
+            }
+
+            h1 {
+                font-size: 1.8rem;
+            }
+
+            .action-button, #generate-btn, #send-btn, #url-upload-btn, .difficulty-button, #submit-mcq-btn {
+                padding: 10px 15px;
+                font-size: 0.85rem;
+            }
+
+            .file-upload-box {
+                padding: 25px 10px;
+            }
+
+            .upload-icon {
+                font-size: 28px;
+            }
+
+            .upload-text {
+                font-size: 0.75rem;
+            }
+
+            .url-input, .chat-input {
+                padding: 10px 12px;
+                font-size: 0.85rem;
+            }
+
+            .chat-output-area { /* Updated from .output-container */
+                height: 250px;
+                padding: 12px;
+                font-size: 0.8rem;
+            }
+
+            .mcq-question-text {
+                font-size: 0.95rem;
+            }
+
+            .mcq-option {
+                font-size: 0.85rem;
+            }
+        }
+    </style>
+</head>
+<body>
+
+<div class="app-container">
+    <div class="logo-container">
+        <h1>Askyourpaper</h1>
+    </div>
+    
+    <div id="action-instruction" class="action-instruction-group">
+        <div class="action-instruction-text">Select an action first</div>
+    </div>
+
+    <div class="action-buttons-container">
+        <div class="action-buttons-column">
+            <span class="action-hint-arrow"></span>
+            <button class="action-button" data-mode="summarize">Summarize</button>
+        </div>
+        <div class="action-buttons-column">
+            <span class="action-hint-arrow"></span>
+            <button class="action-button" data-mode="highlight">Extract Highlights</button>
+        </div>
+        <div class="action-buttons-column">
+            <span class="action-hint-arrow"></span>
+            <button class="action-button" data-mode="mcq">Generate MCQ</button>
+        </div>
+    </div>
+
+    <div id="mcq-options" class="mcq-options-container">
+        <div class="action-instruction-text">Select a difficulty level:</div>
+        <div class="difficulty-buttons">
+            <button class="difficulty-button" data-difficulty="easy">Easy</button>
+            <button class="difficulty-button" data-difficulty="medium">Medium</button>
+            <button class="difficulty-button" data-difficulty="hard">Hard</button>
+        </div>
+    </div>
+    
+    <div id="local-upload-container" class="active">
+        <label for="file-upload" class="file-upload-box">
+            <span class="upload-icon">📄</span>
+            <span class="upload-text">UPLOAD A PDF, TXT, OR DOCX FILE</span>
+            <input type="file" id="file-upload" accept=".pdf, .txt, .docx, application/vnd.openxmlformats-officedocument.wordprocessingml.document">
+        </label>
+        <span id="file-name-display" class="file-name">NO FILE SELECTED.</span>
+        
+        <div class="upload-link-btn-container">
+            <button id="upload-link-btn">Upload by Link</button>
+        </div>
+    </div>
+    
+    <div id="url-upload-container">
+        <div class="url-input-group">
+            <input type="text" id="url-input" class="url-input" placeholder="HTTPS://EXAMPLE.COM/YOUR-PAPER.PDF">
+            <button id="url-upload-btn" class="action-button">UPLOAD</button>
+        </div>
+        <span class="go-back-btn">Go back to file upload</span>
+    </div>
+    
+    <div class="button-group">
+        <button id="generate-btn" disabled>GENERATE</button>
+        <div id="loading-indicator" class="loading-animation">
+            <div class="dot"></div>
+            <div class="dot"></div>
+            <div class="dot"></div>
+        </div>
+    </div>
+
+    <div id="mcq-submit-group" class="button-group" style="display: none;">
+        <button id="submit-mcq-btn">SUBMIT QUIZ</button>
+    </div>
+
+    <!-- Chat Section - Now always visible and acts as primary output -->
+    <div id="chat-section" class="chat-section">
+        <h2 class="chat-header">Chat with Document</h2>
+        <div class="chat-output-area" id="chat-output-area">
+            <!-- Chat messages and generated content will be dynamically inserted here -->
+        </div>
+        <div class="chat-input-container chat-input-group"> <!-- Added chat-input-group class for styling -->
+            <input type="text" id="chat-input" class="chat-input" placeholder="ASK A QUESTION ABOUT THE DOCUMENT..." disabled>
+            <button id="send-chat-btn" disabled>SEND</button>
+        </div>
+        <div class="loading-animation chat-loading" id="chat-loading-animation">
+            <div class="dot"></div>
+            <div class="dot"></div>
+            <div class="dot"></div>
+            <span class="loading-text">AI is typing...</span>
+        </div>
+        <div class="error-message chat-error-message" id="chat-error-message"></div>
+    </div>
+</div>
+
 <script>
     // IMPORTANT: Replace with your actual N8N webhook URLs
     const initialGenerationWebhookUrl = "https://n8n-3rkg.onrender.com/webhook-test/process-document";
-    const chatWebhookUrl = "https://n8n-3rkg.onrender.com/webhook-test/chat-query";
+    const chatWebhookUrl = "https://n8n-3rkg.onrender.com/webhook-test/chat-query"; // Ensure this is correct for chat!
 
     const fileInput = document.getElementById('file-upload');
     const fileNameDisplay = document.getElementById('file-name-display');
@@ -148,7 +977,10 @@
         }
 
         // Clear chat area and display "Generating..." message
-        chatOutputArea.innerHTML = ''; 
+        while (chatOutputArea.firstChild) { // Robust clearing
+            chatOutputArea.removeChild(chatOutputArea.firstChild);
+        }
+        chatOutputArea.scrollTop = 0; // Reset scroll
         displayChatMessage('ai', "Generating..."); 
         loadingIndicator.classList.add('visible');
         generateBtn.disabled = true;
@@ -207,7 +1039,7 @@
             const response = await fetch(initialGenerationWebhookUrl, fetchOptions);
             let rawData = await response.json(); // Get the raw response
 
-            console.log("DEBUG: Backend Raw Response Data:", rawData); // Log the full raw response for debugging
+            console.log("DEBUG: Backend Raw Response Data (from n8n):", rawData); // Log the full raw data for debugging
 
             // IMPORTANT: Process the data received from n8n
             // The data is now directly the object, not an array.
@@ -238,8 +1070,12 @@
                 console.log("DEBUG: Session ID received:", sessionId);
 
                 // Clear "Generating..." message before displaying actual content
-                chatOutputArea.innerHTML = ''; 
+                while (chatOutputArea.firstChild) { // Robust clearing
+                    chatOutputArea.removeChild(chatOutputArea.firstChild);
+                }
+                chatOutputArea.scrollTop = 0; // Reset scroll
                 console.log("DEBUG: chatOutputArea cleared. Current innerHTML:", chatOutputArea.innerHTML); // Debug clear
+
 
                 if (currentMode === 'summarize') {
                     console.log("DEBUG: Attempting to display summary. Summary content:", processedData.summary); // New debug
@@ -289,7 +1125,10 @@
 
     // --- MCQ Quiz Logic ---
     function displayMCQQuiz(mcqs) {
-        chatOutputArea.innerHTML = ''; // Clear chat area for quiz
+        while (chatOutputArea.firstChild) { // Robust clearing
+            chatOutputArea.removeChild(chatOutputArea.firstChild);
+        }
+        chatOutputArea.scrollTop = 0; // Reset scroll
         displayChatMessage('ai', "Here is your MCQ quiz:"); // Announce the quiz
 
         score = 0;
@@ -345,7 +1184,10 @@
             }
         });
 
-        chatOutputArea.innerHTML = ''; // Clear chat area for results
+        while (chatOutputArea.firstChild) { // Robust clearing
+            chatOutputArea.removeChild(chatOutputArea.firstChild);
+        }
+        chatOutputArea.scrollTop = 0; // Reset scroll
 
         currentQuizQuestions.forEach((mcq, qIndex) => {
             const questionDiv = document.createElement('div');
@@ -386,24 +1228,25 @@
 
     // --- Chat Logic ---
     function displayChatMessage(sender, message) {
-        console.log(`DEBUG: displayChatMessage called. Sender: ${sender}, Message (first 100 chars): ${message.substring(0, Math.min(message.length, 100))}`); // New debug line
-        console.log("DEBUG: chatOutputArea element:", chatOutputArea); // New debug line
+        console.log(`DEBUG: displayChatMessage called. Sender: ${sender}, Message (first 100 chars): ${message.substring(0, Math.min(message.length, 100))}`);
+        console.log("DEBUG: chatOutputArea element:", chatOutputArea);
         const messageBubble = document.createElement('div');
         messageBubble.classList.add('chat-message-bubble', sender); // 'user' or 'ai'
 
         const span = document.createElement('span');
         span.textContent = message;
         messageBubble.appendChild(span);
-        console.log("DEBUG: messageBubble content before append to chatOutputArea:", messageBubble.innerHTML); // New debug line
+        console.log("DEBUG: messageBubble content before append to chatOutputArea:", messageBubble.innerHTML);
 
         chatOutputArea.appendChild(messageBubble);
         chatOutputArea.scrollTop = chatOutputArea.scrollHeight; // Auto-scroll to bottom
-        console.log("DEBUG: chatOutputArea content after append (first 200 chars):", chatOutputArea.innerHTML.substring(0, Math.min(chatOutputArea.innerHTML.length, 200))); // New debug line
+        console.log("DEBUG: chatOutputArea content after append (first 200 chars):", chatOutputArea.innerHTML.substring(0, Math.min(chatOutputArea.innerHTML.length, 200)));
     }
 
     async function handleSendChat() {
         const userMessage = chatInput.value.trim();
         if (!userMessage || !sessionId || isChatLoading) {
+            console.log("DEBUG: Chat not sent. User message empty, no session, or already loading.");
             return; // Don't send empty messages, or if no session, or if already loading
         }
 
@@ -415,6 +1258,8 @@
         chatInput.disabled = true;
         sendChatBtn.disabled = true;
         chatLoadingAnimation.classList.add('visible');
+        console.log("DEBUG: Sending chat message with sessionId:", sessionId, "and query:", userMessage);
+        console.log("DEBUG: Calling chatWebhookUrl:", chatWebhookUrl);
 
         try {
             const response = await fetch(chatWebhookUrl, {
@@ -425,21 +1270,38 @@
                 body: JSON.stringify({
                     sessionId: sessionId,
                     query: userMessage,
-                    filename: fileNameDisplay.innerText.replace('FILE SELECTED: ', '').replace('URL SELECTED: ', '').replace('NO FILE SELECTED.', '').replace('NO URL SELECTED.', '') // Pass filename for n8n to retrieve context
+                    // Pass filename for n8n to retrieve context (if needed by n8n)
+                    filename: fileNameDisplay.innerText.replace('FILE SELECTED: ', '').replace('URL SELECTED: ', '').replace('NO FILE SELECTED.', '').replace('NO URL SELECTED.', '') 
                 }),
             });
 
             if (!response.ok) {
                 const errorData = await response.json().catch(() => ({ message: 'Unknown error' }));
+                console.error("DEBUG: Chat webhook response not OK. Status:", response.status, "Error Data:", errorData);
                 throw new Error(`HTTP error! Status: ${response.status}, Message: ${errorData.message || JSON.stringify(errorData)}`);
             }
 
             const data = await response.json();
-            const aiResponse = data.response || "I couldn't get a clear answer. Please try rephrasing your question.";
+            console.log("DEBUG: Raw chat response from webhook:", data); // THIS IS THE CRUCIAL LOG
+            
+            let aiResponse = "I couldn't get a clear answer. Please try rephrasing your question."; // Default fallback
+
+            // NEW DEBUG LOG: Check the value of data[0].response directly
+            if (Array.isArray(data) && data.length > 0) {
+                console.log("DEBUG: Value of data[0].response:", data[0].response);
+                if (data[0].response) { // Check if it's truthy (not null, undefined, or empty string)
+                    aiResponse = data[0].response; 
+                }
+            } else if (data.response) { // Fallback for direct object (less likely but good to have)
+                console.log("DEBUG: Value of data.response (direct object case):", data.response);
+                aiResponse = data.response;
+            }
+
+            console.log("DEBUG: AI Response content:", aiResponse);
             displayChatMessage('ai', aiResponse);
 
         } catch (error) {
-            console.error("Error sending chat message:", error);
+            console.error("ERROR: Error sending chat message:", error);
             chatErrorMessage.textContent = `Error: ${error.message}. Please try again.`;
             chatErrorMessage.classList.add('visible');
             displayChatMessage('ai', `Sorry, I encountered an error: "${error.message}". Please try again.`);
@@ -466,6 +1328,9 @@
         updateButtonState();
         // Display initial message in the chat area
         displayChatMessage('ai', "SELECT AN ACTION AND UPLOAD A DOCUMENT TO GET STARTED.");
+        displayChatMessage('ai', "If you see this, the display is working!"); // Crucial test message
     });
 
 </script>
+</body>
+</html>
